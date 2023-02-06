@@ -1,5 +1,7 @@
 import argparse
+import os.path
 import sys
+import tempfile
 
 from requests import get
 import urllib.parse
@@ -131,7 +133,8 @@ def get_release_packages(args, built_in_feed_id, space_id, releases):
 
     releases_map = {}
     for release in releases.keys():
-        deployment_process = get_deployment_process(args, space_id, releases[release].get("ProjectDeploymentProcessSnapshotId"))
+        deployment_process = get_deployment_process(args, space_id,
+                                                    releases[release].get("ProjectDeploymentProcessSnapshotId"))
         packages = releases[release].get("SelectedPackages")
         if packages is not None:
             releases_map[release] = [{
@@ -157,6 +160,33 @@ def list_package_diff(release_packages, print_new_package, print_removed_package
             print_removed_package(package)
 
 
+def download_packages(args, space_id, release_packages, path):
+    for package in release_packages["destination"]:
+        download_package(args, space_id, package["id"], package["version"], path)
+
+    for package in release_packages["source"]:
+        if len([a for a in release_packages["destination"] if
+                a["id"] == package["id"] and a["version"] == package["version"]]) == 0:
+            download_package(args, space_id, package["id"], package["version"], path)
+
+
+def download_package(args, space_id, package_id, package_version, path):
+    if space_id is None or package_id is None or package_version is None:
+        return None
+
+    url = args.octopus_url + "/api/" + space_id + "/Packages/packages-" + package_id + "." + package_version
+    response = get(url, headers=get_octopus_headers(args))
+    package = response.json()
+
+    url = args.octopus_url + "/api/" + space_id + "/Packages/packages-" + package_id + "." + package_version + "/raw"
+    response = get(url, headers=get_octopus_headers(args))
+    file_path = os.path.join(path, package_id + "." + package_version + package['FileExtension'])
+    print(file_path)
+    f = open(file_path, "wb")
+    f.write(response.content)
+    f.close()
+
+
 args = get_args()
 space_id = space_name_to_id(args)
 project_id = project_name_to_id(args, space_id)
@@ -164,5 +194,8 @@ releases = get_release(args, space_id, project_id)
 built_in_feed_id = get_built_in_feed_id(args, space_id)
 release_packages = get_release_packages(args, built_in_feed_id, space_id, releases)
 list_package_diff(release_packages,
-                  lambda p: print("New release added package: " + p["id"] + "\n"),
-                  lambda p: print("New release removed package: " + p["id"] + "\n"))
+                  lambda p: print("New release added package: " + p["id"]),
+                  lambda p: print("New release removed package: " + p["id"]))
+temp_dir = tempfile.mkdtemp()
+print("Temp dir is " + temp_dir)
+download_packages(args, space_id, release_packages, temp_dir)
