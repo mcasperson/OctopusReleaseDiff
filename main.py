@@ -227,42 +227,50 @@ def compare_directories(release_packages_with_extract, left_only, right_only, di
         for source_package in release_packages_with_extract["source"]:
             if dest_package["id"] == source_package["id"] and dest_package["version"] != source_package["version"]:
                 report = filecmp.dircmp(dest_package["extracted"], source_package["extracted"])
-                left_only(report.left_only)
-                right_only(report.right_only)
-                diff(report.diff_files, dest_package["extracted"], source_package["extracted"])
+                left_only(report.left_only, dest_package, source_package)
+                right_only(report.right_only, dest_package, source_package)
+                diff(report.diff_files, dest_package, source_package)
 
 
-def print_added_files(releases, files):
+def print_added_files(releases, files, dest_package, source_package):
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
-              + " added the following files from release " + releases["source"][
-                  "Version"] + ":\n\t"
+              + " added the following files from "
+              + dest_package["id"] + "." + dest_package["version"]
+              + " compared to release " + releases["source"]["Version"] + " with package "
+              + source_package["id"] + "." + source_package["version"] + ":\n\t"
               + "\n\t".join(files))
 
 
-def print_removed_files(releases, files):
+def print_removed_files(releases, files, dest_package, source_package):
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
-              + " removed the following files from release " + releases["source"][
-                  "Version"] + ":\n\t"
+              + " removed the following files from "
+              + dest_package["id"] + "." + dest_package["version"]
+              + " compared to release " + releases["source"]["Version"] + " with package "
+              + source_package["id"] + "." + source_package["version"] + ":\n\t"
               + "\n\t".join(files))
 
 
-def print_changed_files(releases, files, dest_path, source_path):
+def print_changed_files(releases, files, dest_package, source_package):
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
-              + " removed the following files from release " + releases["source"][
-                  "Version"] + ": \n\t"
+              + " changed the following files from "
+              + dest_package["id"] + "." + dest_package["version"]
+              + " compared to release " + releases["source"]["Version"] + " with package "
+              + source_package["id"] + "." + source_package["version"] + ":\n\t"
               + "\n\t".join(files))
 
-    for file in files:
-        source_file = os.path.join(source_path, file)
-        dest_file = os.path.join(dest_path, file)
-        if not (is_binary(source_file) or is_binary(dest_file)):
-            text1 = open(source_file).readlines()
-            text2 = open(dest_file).readlines()
-            for line in difflib.unified_diff(text1, text2):
-                print(line)
+        print("")
+        for file in files:
+            source_file = os.path.join(source_package["extracted"], file)
+            dest_file = os.path.join(dest_package["extracted"], file)
+            if not (is_binary(source_file) or is_binary(dest_file)):
+                text1 = open(source_file).readlines()
+                text2 = open(dest_file).readlines()
+                print("Diff of " + file + ":")
+                for line in difflib.unified_diff(text1, text2):
+                    print(line)
 
 
 args = get_args()
@@ -282,6 +290,6 @@ temp_dir = tempfile.mkdtemp()
 release_packages_with_download = download_packages(args, space_id, release_packages, temp_dir)
 release_packages_with_extract = extract_packages(release_packages_with_download)
 compare_directories(release_packages_with_extract,
-                    lambda files: print_added_files(releases, files),
-                    lambda files: print_removed_files(releases, files),
+                    lambda files, dest, source: print_added_files(releases, files, dest, source),
+                    lambda files, dest, source: print_removed_files(releases, files, dest, source),
                     lambda files, dest, source: print_changed_files(releases, files, dest, source))
