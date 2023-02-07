@@ -379,12 +379,32 @@ def print_changed_step(release):
             print(line)
 
 
-def display_welcome_info(release_packages):
+def display_welcome_banner(release_packages):
     if release_packages is None:
         return None
 
     print("Inventory of changes in release " + release_packages["destination"]["version"]
           + " compared to release " + release_packages["source"]["version"] + ".")
+
+
+def display_package_diff_banner():
+    print("")
+    print("====================================================================")
+    print("Added and removed packages and changes to package content")
+    print("====================================================================")
+
+
+def display_variable_diff_banner():
+    print("")
+    print("====================================================================")
+    print("Added and removed variables and changes to variable values")
+    print("====================================================================")
+
+
+def display_step_diff_banner():
+    print("")
+    print("====================================================================")
+    print("Changes between the steps")
     print("====================================================================")
 
 
@@ -417,7 +437,9 @@ releases = get_release(args, space_id, project_id)
 built_in_feed_id = get_built_in_feed_id(args, space_id)
 release_packages = flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id, releases,
                                                                 get_deployment_process, get_variables)
-display_welcome_info(release_packages)
+display_welcome_banner(release_packages)
+
+display_package_diff_banner()
 list_package_diff(release_packages,
                   lambda p: print("Release " + release_packages["destination"]["version"]
                                   + " added the package: " + p["id"]),
@@ -430,7 +452,11 @@ compare_directories(release_packages_with_extract,
                     lambda files, dest, source: print_added_files(releases, files, dest, source),
                     lambda files, dest, source: print_removed_files(releases, files, dest, source),
                     lambda files, dest, source: print_changed_files(releases, files, dest, source))
+
+display_step_diff_banner()
 print_changed_step(release_packages)
+
+display_variable_diff_banner()
 get_variable_changes(release_packages_with_extract,
                      lambda p: print("Release " + release_packages["destination"]["version"]
                                      + " added the variable: " + p["Name"]),
