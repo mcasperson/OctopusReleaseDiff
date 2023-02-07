@@ -55,6 +55,9 @@ def get_octopus_headers(args):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def space_name_to_id(args):
+    if args is None:
+        return None
+
     url = args.octopus_url + "/api/Spaces?partialName=" + urllib.parse.quote(args.octopus_space.strip()) + "&take=1000"
     response = get(url, headers=get_octopus_headers(args))
     spaces_json = response.json()
@@ -71,7 +74,7 @@ def space_name_to_id(args):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def project_name_to_id(args, space_id):
-    if space_id is None:
+    if args is None or space_id is None:
         return None
 
     url = args.octopus_url + "/api/" + space_id + "/Projects?take=1000&partialName=" + urllib.parse.quote(
@@ -91,7 +94,7 @@ def project_name_to_id(args, space_id):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_release(args, space_id, project_id):
-    if space_id is None or project_id is None:
+    if args is None or space_id is None or project_id is None:
         return None
 
     url = args.octopus_url + "/api/" + space_id + "/Projects/" + project_id + "/Releases"
@@ -127,8 +130,9 @@ def get_release(args, space_id, project_id):
     return None
 
 
+@retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_deployment_process(args, space_id, deployment_process_id):
-    if space_id is None or deployment_process_id is None:
+    if args is None or space_id is None or deployment_process_id is None:
         return None
 
     url = args.octopus_url + "/api/" + space_id + "/DeploymentProcesses/" + deployment_process_id
@@ -136,8 +140,9 @@ def get_deployment_process(args, space_id, deployment_process_id):
     return response.json()
 
 
+@retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_variables(args, space_id, variables_is):
-    if space_id is None or variables_is is None:
+    if args is None or space_id is None or variables_is is None:
         return None
 
     url = args.octopus_url + "/api/" + space_id + "/Variables/" + variables_is
@@ -145,8 +150,9 @@ def get_variables(args, space_id, variables_is):
     return response.json()
 
 
+@retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_built_in_feed_id(args, space_id):
-    if space_id is None:
+    if args is None or space_id is None:
         return None
 
     url = args.octopus_url + "/api/" + space_id + "/Feeds?take=1000"
@@ -159,7 +165,11 @@ def get_built_in_feed_id(args, space_id):
     return None
 
 
+@retry(stop_max_attempt_number=3, wait_fixed=2000)
 def package_from_built_in_feed(built_in_feed_id, deployment_process, step_name, action_name, package_name):
+    if built_in_feed_id is None or deployment_process is None or step_name is None or action_name is None or package_name is None:
+        return None
+
     for step in deployment_process["Steps"]:
         if step["Name"] == step_name:
             for action in step["Actions"]:
@@ -181,7 +191,7 @@ def flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_i
     This function flattens the release, deployment process, variables, and additional information such as
     the source of the packages into a simple map. This map is what the rest of the script works with.
     """
-    if releases is None or built_in_feed_id is None or space_id is None:
+    if args is None or releases is None or built_in_feed_id is None or space_id is None or releases is None or get_deployment_process is None or get_variables is None:
         return None
 
     releases_map = {}
@@ -211,16 +221,24 @@ def flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_i
 
 
 def list_package_diff(release_packages, print_new_package, print_removed_package):
-    for package in release_packages["destination"]["packages"]:
-        if len([a for a in release_packages["source"]["packages"] if a["id"] == package["id"]]) == 0:
-            print_new_package(package)
+    if release_packages is None:
+        return None
 
-    for package in release_packages["source"]["packages"]:
-        if len([a for a in release_packages["destination"]["packages"] if a["id"] == package["id"]]) == 0:
-            print_removed_package(package)
+    if print_new_package is not None:
+        for package in release_packages["destination"]["packages"]:
+            if len([a for a in release_packages["source"]["packages"] if a["id"] == package["id"]]) == 0:
+                print_new_package(package)
+
+    if print_removed_package is not None:
+        for package in release_packages["source"]["packages"]:
+            if len([a for a in release_packages["destination"]["packages"] if a["id"] == package["id"]]) == 0:
+                print_removed_package(package)
 
 
 def download_packages(args, space_id, release_packages, path):
+    if args is None or space_id is None or release_packages is None or path is None:
+        return None
+
     for package in release_packages["destination"]["packages"]:
         package["downloaded"] = download_package(args, space_id, package["id"], package["version"], path)
 
@@ -236,7 +254,7 @@ def download_packages(args, space_id, release_packages, path):
 
 
 def download_package(args, space_id, package_id, package_version, path):
-    if space_id is None or package_id is None or package_version is None:
+    if args is None or space_id is None or package_id is None or package_version is None or path is None:
         return None
 
     url = args.octopus_url + "/api/" + space_id + "/Packages/packages-" + package_id + "." + package_version
@@ -264,12 +282,12 @@ def extract_package(dir, archive):
     return None
 
 
-def extract_packages(release_packages_with_download):
-    if release_packages_with_download is None:
+def extract_packages(releases):
+    if releases is None or releases.get("source") is None or releases.get("destination") is None:
         return None
 
     processed = {}
-    for release_packages in release_packages_with_download.values():
+    for release_packages in releases.values():
         for package in release_packages["packages"]:
             if package["downloaded"] not in processed.keys():
                 package["extracted"] = extract_package(temp_dir, package["downloaded"])
@@ -277,15 +295,16 @@ def extract_packages(release_packages_with_download):
             else:
                 package["extracted"] = processed[package["downloaded"]]
 
-    return release_packages_with_download
+    return releases
 
 
-def compare_directories(release_packages_with_extract, left_only, right_only, diff):
-    if release_packages_with_extract is None:
+def compare_directories(releases, left_only, right_only, diff):
+    if releases is None or left_only is None or right_only is None or diff is None \
+            or releases.get("source") is None or releases.get("destination") is None:
         return None
 
-    for dest_package in release_packages_with_extract["destination"]["packages"]:
-        for source_package in release_packages_with_extract["source"]["packages"]:
+    for dest_package in releases["destination"]["packages"]:
+        for source_package in releases["source"]["packages"]:
             if dest_package["id"] == source_package["id"] and dest_package["version"] != source_package["version"]:
                 report = filecmp.dircmp(dest_package["extracted"], source_package["extracted"])
                 left_only(report.left_only, dest_package, source_package)
@@ -294,7 +313,8 @@ def compare_directories(release_packages_with_extract, left_only, right_only, di
 
 
 def print_added_files(releases, files, dest_package, source_package):
-    if releases is None:
+    if releases is None or files is None or dest_package is None or source_package is None \
+            or releases.get("source") is None or releases.get("destination") is None:
         return None
 
     if len(files) != 0:
@@ -307,7 +327,8 @@ def print_added_files(releases, files, dest_package, source_package):
 
 
 def print_removed_files(releases, files, dest_package, source_package):
-    if releases is None:
+    if releases is None or files is None or dest_package is None or source_package is None \
+            or releases.get("source") is None or releases.get("destination") is None:
         return None
 
     if len(files) != 0:
@@ -320,12 +341,13 @@ def print_removed_files(releases, files, dest_package, source_package):
 
 
 def print_changed_files(releases, files, dest_package, source_package):
-    if releases is None:
+    if releases is None or files is None or dest_package is None or source_package is None \
+            or releases.get("source") is None or releases.get("destination") is None:
         return None
 
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
-              + " changed the following files in "
+              + " changed the following files in package "
               + dest_package["id"] + "." + dest_package["version"]
               + " compared to release " + releases["source"]["Version"] + " with package "
               + source_package["id"] + "." + source_package["version"] + ":\n\t"
@@ -344,7 +366,7 @@ def print_changed_files(releases, files, dest_package, source_package):
 
 
 def print_changed_step(release):
-    if releases is None:
+    if releases is None or release.get("source") is None or release.get("destination") is None:
         return None
 
     source_json = json.dumps(release["source"]["deployment_process"]["Steps"], indent=2)
@@ -370,18 +392,22 @@ def get_variable_changes(release_packages, print_new_variable, print_removed_var
     if release_packages is None:
         return None
 
-    for variable in release_packages["destination"]["variables"]:
-        if len([a for a in release_packages["source"]["variables"] if a["Name"] == variable["Name"]]) == 0:
-            print_new_variable(variable)
+    if print_new_variable is not None:
+        for variable in release_packages["destination"]["variables"]:
+            if len([a for a in release_packages["source"]["variables"] if a["Name"] == variable["Name"]]) == 0:
+                print_new_variable(variable)
 
-    for variable in release_packages["source"]["variables"]:
-        if len([a for a in release_packages["destination"]["variables"] if a["Name"] == variable["Name"]]) == 0:
-            print_removed_variable(variable)
+    if print_removed_variable is not None:
+        for variable in release_packages["source"]["variables"]:
+            if len([a for a in release_packages["destination"]["variables"] if a["Name"] == variable["Name"]]) == 0:
+                print_removed_variable(variable)
 
-    for variable in release_packages["destination"]["variables"]:
-        if len([a for a in release_packages["source"]["variables"] if
-                a["Name"] == variable["Name"] and not a["IsSensitive"] and not a["Value"] == variable["Value"]]) != 0:
-            print_changed_variable(variable)
+    if print_changed_variable is not None:
+        for variable in release_packages["destination"]["variables"]:
+            if len([a for a in release_packages["source"]["variables"] if
+                    a["Name"] == variable["Name"] and not a["IsSensitive"] and not a["Value"] == variable[
+                        "Value"]]) != 0:
+                print_changed_variable(variable)
 
 
 args = get_args()
