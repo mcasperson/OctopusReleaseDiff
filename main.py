@@ -1,7 +1,12 @@
 import argparse
+import difflib
+import filecmp
 import os.path
 import sys
 import tempfile
+from pathlib import Path
+from binaryornot.check import is_binary
+import zipfile
 
 from requests import get
 import urllib.parse
@@ -162,12 +167,17 @@ def list_package_diff(release_packages, print_new_package, print_removed_package
 
 def download_packages(args, space_id, release_packages, path):
     for package in release_packages["destination"]:
-        download_package(args, space_id, package["id"], package["version"], path)
+        package["downloaded"] = download_package(args, space_id, package["id"], package["version"], path)
 
     for package in release_packages["source"]:
-        if len([a for a in release_packages["destination"] if
-                a["id"] == package["id"] and a["version"] == package["version"]]) == 0:
-            download_package(args, space_id, package["id"], package["version"], path)
+        matching = [a for a in release_packages["destination"] if
+                    a["id"] == package["id"] and a["version"] == package["version"]]
+        if len(matching) == 0:
+            package["downloaded"] = download_package(args, space_id, package["id"], package["version"], path)
+        else:
+            package["downloaded"] = matching[0]["downloaded"]
+
+    return release_packages
 
 
 def download_package(args, space_id, package_id, package_version, path):
@@ -181,10 +191,78 @@ def download_package(args, space_id, package_id, package_version, path):
     url = args.octopus_url + "/api/" + space_id + "/Packages/packages-" + package_id + "." + package_version + "/raw"
     response = get(url, headers=get_octopus_headers(args))
     file_path = os.path.join(path, package_id + "." + package_version + package['FileExtension'])
-    print(file_path)
-    f = open(file_path, "wb")
-    f.write(response.content)
-    f.close()
+    with open(file_path, "wb") as f:
+        f.write(response.content)
+
+    return file_path
+
+
+def extract_package(dir, archive):
+    try:
+        with zipfile.ZipFile(archive, 'r') as zip_ref:
+            extract_dir = os.path.join(dir, Path(archive).stem)
+            zip_ref.extractall(extract_dir)
+            return extract_dir
+    except:
+        print("Failed to extract " + archive)
+
+    return None
+
+
+def extract_packages(release_packages_with_download):
+    processed = {}
+    for release_packages in release_packages_with_download.values():
+        for package in release_packages:
+            if package["downloaded"] not in processed.keys():
+                package["extracted"] = extract_package(temp_dir, package["downloaded"])
+                processed[package["downloaded"]] = package["extracted"]
+            else:
+                package["extracted"] = processed[package["downloaded"]]
+
+    return release_packages_with_download
+
+
+def compare_directories(release_packages_with_extract, left_only, right_only, diff):
+    for dest_package in release_packages_with_extract["destination"]:
+        for source_package in release_packages_with_extract["source"]:
+            if dest_package["id"] == source_package["id"] and dest_package["version"] != source_package["version"]:
+                report = filecmp.dircmp(dest_package["extracted"], source_package["extracted"])
+                left_only(report.left_only)
+                right_only(report.right_only)
+                diff(report.diff_files, dest_package["extracted"], source_package["extracted"])
+
+
+def print_added_files(releases, files):
+    if len(files) != 0:
+        print("Release " + releases["destination"]["Version"]
+              + " added the following files from release " + releases["source"][
+                  "Version"] + ":\n\t"
+              + "\n\t".join(files))
+
+
+def print_removed_files(releases, files):
+    if len(files) != 0:
+        print("Release " + releases["destination"]["Version"]
+              + " removed the following files from release " + releases["source"][
+                  "Version"] + ":\n\t"
+              + "\n\t".join(files))
+
+
+def print_changed_files(releases, files, dest_path, source_path):
+    if len(files) != 0:
+        print("Release " + releases["destination"]["Version"]
+              + " removed the following files from release " + releases["source"][
+                  "Version"] + ": \n\t"
+              + "\n\t".join(files))
+
+    for file in files:
+        source_file = os.path.join(source_path, file)
+        dest_file = os.path.join(dest_path, file)
+        if not (is_binary(source_file) or is_binary(dest_file)):
+            text1 = open(source_file).readlines()
+            text2 = open(dest_file).readlines()
+            for line in difflib.unified_diff(text1, text2):
+                print(line)
 
 
 args = get_args()
@@ -194,8 +272,16 @@ releases = get_release(args, space_id, project_id)
 built_in_feed_id = get_built_in_feed_id(args, space_id)
 release_packages = get_release_packages(args, built_in_feed_id, space_id, releases)
 list_package_diff(release_packages,
-                  lambda p: print("New release added package: " + p["id"]),
-                  lambda p: print("New release removed package: " + p["id"]))
+                  lambda p: print("Release " + releases["destination"]["Version"]
+                                  + " added the following package from release "
+                                  + releases["source"]["Version"] + ": " + p["id"]),
+                  lambda p: print("Release " + releases["destination"]["Version"]
+                                  + " removed the following package from release "
+                                  + releases["source"]["Version"] + ": " + p["id"]))
 temp_dir = tempfile.mkdtemp()
-print("Temp dir is " + temp_dir)
-download_packages(args, space_id, release_packages, temp_dir)
+release_packages_with_download = download_packages(args, space_id, release_packages, temp_dir)
+release_packages_with_extract = extract_packages(release_packages_with_download)
+compare_directories(release_packages_with_extract,
+                    lambda files: print_added_files(releases, files),
+                    lambda files: print_removed_files(releases, files),
+                    lambda files, dest, source: print_changed_files(releases, files, dest, source))
