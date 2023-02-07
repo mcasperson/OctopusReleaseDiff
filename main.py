@@ -424,10 +424,10 @@ def get_variable_changes(release_packages, print_new_variable, print_removed_var
 
     if print_changed_variable is not None:
         for variable in release_packages["destination"]["variables"]:
-            if len([a for a in release_packages["source"]["variables"] if
-                    a["Name"] == variable["Name"] and not a["IsSensitive"] and not a["Value"] == variable[
-                        "Value"]]) != 0:
-                print_changed_variable(variable)
+            diff = [a for a in release_packages["source"]["variables"] if
+                    a["Id"] == variable["Id"] and not a["IsSensitive"] and not a["Value"] == variable["Value"]]
+            if len(diff) != 0:
+                print_changed_variable(variable, diff[0])
 
 
 args = get_args()
@@ -458,10 +458,11 @@ print_changed_step(release_packages)
 
 display_variable_diff_banner()
 get_variable_changes(release_packages_with_extract,
-                     lambda p: print("Release " + release_packages["destination"]["version"]
-                                     + " added the variable: " + p["Name"]),
-                     lambda p: print("Release " + release_packages["destination"]["version"]
-                                     + " removed the variable: " + p["Name"]),
-                     lambda p: print("Release " + release_packages["destination"]["version"]
-                                     + " changed the value of the variable \"" + p["Name"] + "\" to \"" + p[
-                                         "Value"] + "\""))
+                     lambda new: print("Release " + release_packages["destination"]["version"]
+                                       + " added the variable: " + new["Name"]),
+                     lambda new: print("Release " + release_packages["destination"]["version"]
+                                       + " removed the variable: " + new["Name"]),
+                     lambda new, old: print("Release " + release_packages["destination"]["version"]
+                                            + " changed the value of the variable \"" + new["Name"] + "\" from \"" +
+                                            old["Value"] + "\" to \"" + new[
+                                                "Value"] + "\""))
