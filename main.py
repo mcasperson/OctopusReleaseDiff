@@ -6,6 +6,8 @@ import os.path
 import sys
 import tempfile
 from pathlib import Path
+
+import numpy as np
 from binaryornot.check import is_binary
 import zipfile
 
@@ -408,7 +410,7 @@ def display_step_diff_banner():
     print("====================================================================")
 
 
-def get_variable_changes(release_packages, print_new_variable, print_removed_variable, print_changed_variable):
+def get_variable_changes(release_packages, print_new_variable, print_removed_variable, print_changed_variable, print_scope_changed):
     if release_packages is None:
         return None
 
@@ -428,6 +430,21 @@ def get_variable_changes(release_packages, print_new_variable, print_removed_var
                     a["Id"] == variable["Id"] and not a["IsSensitive"] and not a["Value"] == variable["Value"]]
             if len(diff) != 0:
                 print_changed_variable(variable, diff[0])
+
+    if print_scope_changed is not None:
+        for variable in release_packages["destination"]["variables"]:
+            diff = [a for a in release_packages["source"]["variables"] if
+                    a["Id"] == variable["Id"] and (
+                        not np.array_equiv(a["Scope"].get("Environment") or [], variable["Scope"].get("Environment") or [])
+                        or not np.array_equiv(a["Scope"].get("Machines") or [], variable["Scope"].get("Machines") or [])
+                        or not np.array_equiv(a["Scope"].get("Actions") or [], variable["Scope"].get("Actions") or [])
+                        or not np.array_equiv(a["Scope"].get("Roles") or [], variable["Scope"].get("Roles") or [])
+                        or not np.array_equiv(a["Scope"].get("Channels") or [], variable["Scope"].get("Channels") or [])
+                        or not np.array_equiv(a["Scope"].get("TenantTags") or [], variable["Scope"].get("TenantTags") or [])
+                        or not np.array_equiv(a["Scope"].get("Processes") or [], variable["Scope"].get("Processes") or [])
+                    )]
+            if len(diff) != 0:
+                print_scope_changed(variable, diff[0])
 
 
 args = get_args()
@@ -465,4 +482,6 @@ get_variable_changes(release_packages_with_extract,
                      lambda new, old: print("Release " + release_packages["destination"]["version"]
                                             + " changed the value of the variable \"" + new["Name"] + "\" from \"" +
                                             old["Value"] + "\" to \"" + new[
-                                                "Value"] + "\""))
+                                                "Value"] + "\""),
+                     lambda new, old: print("Release " + release_packages["destination"]["version"]
+                                            + " changed the scope of the variable \"" + new["Name"] + "\""))
