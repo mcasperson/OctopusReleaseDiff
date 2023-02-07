@@ -17,6 +17,10 @@ from retrying import retry
 
 
 def get_args():
+    """
+    Defines the command line arguments used by the script
+    :return: the parsed arguments
+    """
     parser = argparse.ArgumentParser(description='Octopus release diff.')
     parser.add_argument('--octopusUrl',
                         dest='octopus_url',
@@ -52,11 +56,23 @@ def get_args():
 
 
 def get_octopus_headers(args):
+    """
+    Generate the HTTP headers required to access the Octopus API
+    :param args: parsed arguments
+    :return: The API key headers
+    """
+    if args is None:
+        return None
     return {"X-Octopus-ApiKey": args.octopus_api_key}
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def space_name_to_id(args):
+    """
+    Convert a space name to an ID
+    :param args: The parsed arguments
+    :return: The ID of the space
+    """
     if args is None:
         return None
 
@@ -76,6 +92,12 @@ def space_name_to_id(args):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def project_name_to_id(args, space_id):
+    """
+    Convert a project name to an ID
+    :param args: The parsed arguments
+    :param space_id: The space ID
+    :return: The project ID
+    """
     if args is None or space_id is None:
         return None
 
@@ -96,6 +118,13 @@ def project_name_to_id(args, space_id):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_release(args, space_id, project_id):
+    """
+    Get the detail of the two releases that are going to be compared
+    :param args: The parsed arguments
+    :param space_id: The space ID
+    :param project_id: The project ID
+    :return: The two releases that are to be compared
+    """
     if args is None or space_id is None or project_id is None:
         return None
 
@@ -134,6 +163,13 @@ def get_release(args, space_id, project_id):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_deployment_process(args, space_id, deployment_process_id):
+    """
+    Get the deployment process
+    :param args: The parsed arguments
+    :param space_id: The space ID
+    :param deployment_process_id: The deployment ID
+    :return: The deployment process
+    """
     if args is None or space_id is None or deployment_process_id is None:
         return None
 
@@ -144,6 +180,13 @@ def get_deployment_process(args, space_id, deployment_process_id):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_variables(args, space_id, variables_is):
+    """
+    Gets the variables
+    :param args: The parsed arguments
+    :param space_id: The space ID
+    :param variables_is: The variable set ID
+    :return: The variable set
+    """
     if args is None or space_id is None or variables_is is None:
         return None
 
@@ -154,6 +197,12 @@ def get_variables(args, space_id, variables_is):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_built_in_feed_id(args, space_id):
+    """
+    Gets the ID of the built-in feed
+    :param args: The parsed arguments
+    :param space_id:
+    :return: The built-in feed ID
+    """
     if args is None or space_id is None:
         return None
 
@@ -169,6 +218,15 @@ def get_built_in_feed_id(args, space_id):
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
 def package_from_built_in_feed(built_in_feed_id, deployment_process, step_name, action_name, package_name):
+    """
+    Determines if a package is from the built-in feed
+    :param built_in_feed_id: The built-in feed ID
+    :param deployment_process: The deployment process
+    :param step_name: The name of the step with the package
+    :param action_name: The name of the action with the package
+    :param package_name: The name of the package
+    :return: True if the package is from the built-in feed, and False otherwise
+    """
     if built_in_feed_id is None or deployment_process is None or step_name is None or action_name is None or package_name is None:
         return None
 
@@ -223,8 +281,14 @@ def flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_i
 
 
 def list_package_diff(release_packages, print_new_package, print_removed_package):
+    """
+    Calculate the added and removed packages
+    :param release_packages: The details of the releases to compare
+    :param print_new_package: A callback to call with the details of new packages
+    :param print_removed_package: A callback to call with the details of removed packages
+    """
     if release_packages is None:
-        return None
+        return
 
     if print_new_package is not None:
         for package in release_packages["destination"]["packages"]:
@@ -238,6 +302,14 @@ def list_package_diff(release_packages, print_new_package, print_removed_package
 
 
 def download_packages(args, space_id, release_packages, path):
+    """
+    Download any packages found in the built-in feed
+    :param args: The parsed arguments
+    :param space_id: The space ID
+    :param release_packages: The details of the release
+    :param path: The path to download the packages to
+    :return: The details of the releases with a download path added for each package
+    """
     if args is None or space_id is None or release_packages is None or path is None:
         return None
 
@@ -256,6 +328,15 @@ def download_packages(args, space_id, release_packages, path):
 
 
 def download_package(args, space_id, package_id, package_version, path):
+    """
+    Download a package from the built-in feed
+    :param args: The parsed arguments
+    :param space_id: The space ID
+    :param package_id: The package ID
+    :param package_version: The package version
+    :param path: The path to download the file to
+    :return: The path to the downloaded file
+    """
     if args is None or space_id is None or package_id is None or package_version is None or path is None:
         return None
 
@@ -273,6 +354,12 @@ def download_package(args, space_id, package_id, package_version, path):
 
 
 def extract_package(dir, archive):
+    """
+    Extract a zip file
+    :param dir: The directory to extract into
+    :param archive: The archive to extract
+    :return: The path of the extracted archive
+    """
     try:
         with zipfile.ZipFile(archive, 'r') as zip_ref:
             extract_dir = os.path.join(dir, Path(archive).stem)
@@ -285,6 +372,11 @@ def extract_package(dir, archive):
 
 
 def extract_packages(releases):
+    """
+    Extract the packages associated with the releases
+    :param releases: The details of the release
+    :return: The detail;s of the releases with the extracted path added for each package
+    """
     if releases is None or releases.get("source") is None or releases.get("destination") is None:
         return None
 
@@ -301,9 +393,16 @@ def extract_packages(releases):
 
 
 def compare_directories(releases, left_only, right_only, diff):
+    """
+    Compare the files from the packages associated with two releases
+    :param releases: The details of the releases
+    :param left_only: A callback to call with files added in the new release
+    :param right_only: A callback to call with files removed in the new release
+    :param diff: A callback to call with files that changed between releases
+    """
     if releases is None or left_only is None or right_only is None or diff is None \
             or releases.get("source") is None or releases.get("destination") is None:
-        return None
+        return
 
     for dest_package in releases["destination"]["packages"]:
         for source_package in releases["source"]["packages"]:
@@ -315,9 +414,16 @@ def compare_directories(releases, left_only, right_only, diff):
 
 
 def print_added_files(releases, files, dest_package, source_package):
+    """
+    Print the details of added files
+    :param releases: The details of the releases to be compared
+    :param files: The list of files added
+    :param dest_package: The new package details
+    :param source_package: The old package details
+    """
     if releases is None or files is None or dest_package is None or source_package is None \
             or releases.get("source") is None or releases.get("destination") is None:
-        return None
+        return
 
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
@@ -329,9 +435,16 @@ def print_added_files(releases, files, dest_package, source_package):
 
 
 def print_removed_files(releases, files, dest_package, source_package):
+    """
+    Print the details of removed files
+    :param releases: The details of the releases to be compared
+    :param files: The list of files removed
+    :param dest_package: The new package details
+    :param source_package: The old package details
+    """
     if releases is None or files is None or dest_package is None or source_package is None \
             or releases.get("source") is None or releases.get("destination") is None:
-        return None
+        return
 
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
@@ -343,6 +456,13 @@ def print_removed_files(releases, files, dest_package, source_package):
 
 
 def print_changed_files(releases, files, dest_package, source_package):
+    """
+    Print the details of changes files
+    :param releases: The details of the releases to be compared
+    :param files: The list of files changed
+    :param dest_package: The new package details
+    :param source_package: The old package details
+    """
     if releases is None or files is None or dest_package is None or source_package is None \
             or releases.get("source") is None or releases.get("destination") is None:
         return None
@@ -368,8 +488,12 @@ def print_changed_files(releases, files, dest_package, source_package):
 
 
 def print_changed_step(release):
+    """
+    Print the details of any changed steps
+    :param release: The details of the releases to compare
+    """
     if releases is None or release.get("source") is None or release.get("destination") is None:
-        return None
+        return
 
     source_json = json.dumps(release["source"]["deployment_process"]["Steps"], indent=2)
     dest_json = json.dumps(release["destination"]["deployment_process"]["Steps"], indent=2)
@@ -382,14 +506,21 @@ def print_changed_step(release):
 
 
 def display_welcome_banner(release_packages):
+    """
+    Display a welcome banner
+    :param release_packages: The details of the releases to compare
+    """
     if release_packages is None:
-        return None
+        return
 
     print("Inventory of changes in release " + release_packages["destination"]["version"]
           + " compared to release " + release_packages["source"]["version"] + ".")
 
 
 def display_package_diff_banner():
+    """
+    Display a package change banner
+    """
     print("")
     print("=======================================================================================")
     print("Added and removed packages and changes to package content")
@@ -397,6 +528,9 @@ def display_package_diff_banner():
 
 
 def display_variable_diff_banner():
+    """
+    Display a variable change banner
+    """
     print("")
     print("=======================================================================================")
     print("Added and removed variables, changes to variable values, and changes to variable scopes")
@@ -404,6 +538,9 @@ def display_variable_diff_banner():
 
 
 def display_step_diff_banner():
+    """
+    Display a step change banner
+    """
     print("")
     print("=======================================================================================")
     print("Changes between the steps")
@@ -411,8 +548,17 @@ def display_step_diff_banner():
 
 
 def get_variable_changes(release_packages, print_new_variable, print_removed_variable, print_changed_variable, print_scope_changed):
+    """
+    Determine any changes to variables between the two releases.
+    :param release_packages: The details of the releases to compare
+    :param print_new_variable: A callback to call with new variables
+    :param print_removed_variable: A callback to call with removed variables
+    :param print_changed_variable: A callback to call with changed variables
+    :param print_scope_changed: A callback to call with variables that had scope changes
+    :return:
+    """
     if release_packages is None:
-        return None
+        return
 
     if print_new_variable is not None:
         for variable in release_packages["destination"]["variables"]:
