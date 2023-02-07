@@ -170,7 +170,8 @@ def package_from_built_in_feed(built_in_feed_id, deployment_process, step_name, 
     return False
 
 
-def flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id, releases):
+def flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id, releases, get_deployment_process,
+                                                 get_variables):
     """
     When performing a diff between two release we are interested in:
     * The packages included in the release
@@ -188,7 +189,7 @@ def flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_i
         deployment_process = get_deployment_process(args, space_id,
                                                     releases[release].get("ProjectDeploymentProcessSnapshotId"))
         variables = get_variables(args, space_id,
-                                                    releases[release].get("ProjectVariableSetSnapshotId"))
+                                  releases[release].get("ProjectVariableSetSnapshotId"))
         packages = releases[release].get("SelectedPackages")
         if packages is not None:
             releases_map[release] = {
@@ -202,7 +203,7 @@ def flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_i
                                                                      a.get("PackageReferenceName")),
                 } for a in packages],
                 "deployment_process": deployment_process,
-                "variables": variables,
+                "variables": variables.get("Variables"),
                 "version": releases[release].get("Version")
             }
 
@@ -264,6 +265,9 @@ def extract_package(dir, archive):
 
 
 def extract_packages(release_packages_with_download):
+    if release_packages_with_download is None:
+        return None
+
     processed = {}
     for release_packages in release_packages_with_download.values():
         for package in release_packages["packages"]:
@@ -277,6 +281,9 @@ def extract_packages(release_packages_with_download):
 
 
 def compare_directories(release_packages_with_extract, left_only, right_only, diff):
+    if release_packages_with_extract is None:
+        return None
+
     for dest_package in release_packages_with_extract["destination"]["packages"]:
         for source_package in release_packages_with_extract["source"]["packages"]:
             if dest_package["id"] == source_package["id"] and dest_package["version"] != source_package["version"]:
@@ -287,6 +294,9 @@ def compare_directories(release_packages_with_extract, left_only, right_only, di
 
 
 def print_added_files(releases, files, dest_package, source_package):
+    if releases is None:
+        return None
+
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
               + " added the following files from "
@@ -297,6 +307,9 @@ def print_added_files(releases, files, dest_package, source_package):
 
 
 def print_removed_files(releases, files, dest_package, source_package):
+    if releases is None:
+        return None
+
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
               + " removed the following files from "
@@ -307,6 +320,9 @@ def print_removed_files(releases, files, dest_package, source_package):
 
 
 def print_changed_files(releases, files, dest_package, source_package):
+    if releases is None:
+        return None
+
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
               + " changed the following files from "
@@ -328,6 +344,9 @@ def print_changed_files(releases, files, dest_package, source_package):
 
 
 def print_changed_step(release):
+    if releases is None:
+        return None
+
     source_json = json.dumps(release["source"]["deployment_process"]["Steps"], indent=2)
     dest_json = json.dumps(release["destination"]["deployment_process"]["Steps"], indent=2)
 
@@ -338,19 +357,46 @@ def print_changed_step(release):
             print(line)
 
 
+def display_welcome_info(release_packages):
+    if release_packages is None:
+        return None
+
+    print("Inventory of changes in release " + release_packages["destination"]["version"]
+          + " compared to release " + release_packages["source"]["version"] + ".")
+    print("====================================================================")
+
+
+def get_variable_changes(release_packages, print_new_variable, print_removed_variable, print_changed_variable):
+    if release_packages is None:
+        return None
+
+    for variable in release_packages["destination"]["variables"]:
+        if len([a for a in release_packages["source"]["variables"] if a["Name"] == variable["Name"]]) == 0:
+            print_new_variable(variable)
+
+    for variable in release_packages["source"]["variables"]:
+        if len([a for a in release_packages["destination"]["variables"] if a["Name"] == variable["Name"]]) == 0:
+            print_removed_variable(variable)
+
+    for variable in release_packages["destination"]["variables"]:
+        if len([a for a in release_packages["source"]["variables"] if
+                a["Name"] == variable["Name"] and not a["IsSensitive"] and not a["Value"] == variable["Value"]]) != 0:
+            print_changed_variable(variable)
+
+
 args = get_args()
 space_id = space_name_to_id(args)
 project_id = project_name_to_id(args, space_id)
 releases = get_release(args, space_id, project_id)
 built_in_feed_id = get_built_in_feed_id(args, space_id)
-release_packages = flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id, releases)
+release_packages = flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id, releases,
+                                                                get_deployment_process, get_variables)
+display_welcome_info(release_packages)
 list_package_diff(release_packages,
-                  lambda p: print("Release " + releases["destination"]["Version"]
-                                  + " added the following package from release "
-                                  + releases["source"]["Version"] + ": " + p["id"]),
-                  lambda p: print("Release " + releases["destination"]["Version"]
-                                  + " removed the following package from release "
-                                  + releases["source"]["Version"] + ": " + p["id"]))
+                  lambda p: print("Release " + release_packages["destination"]["version"]
+                                  + " added the package: " + p["id"]),
+                  lambda p: print("Release " + release_packages["destination"]["version"]
+                                  + " removed the package: " + p["id"]))
 temp_dir = tempfile.mkdtemp()
 release_packages_with_download = download_packages(args, space_id, release_packages, temp_dir)
 release_packages_with_extract = extract_packages(release_packages_with_download)
@@ -359,3 +405,11 @@ compare_directories(release_packages_with_extract,
                     lambda files, dest, source: print_removed_files(releases, files, dest, source),
                     lambda files, dest, source: print_changed_files(releases, files, dest, source))
 print_changed_step(release_packages)
+get_variable_changes(release_packages_with_extract,
+                     lambda p: print("Release " + release_packages["destination"]["version"]
+                                     + " added the variable: " + p["Name"]),
+                     lambda p: print("Release " + release_packages["destination"]["version"]
+                                     + " removed the variable: " + p["Name"]),
+                     lambda p: print("Release " + release_packages["destination"]["version"]
+                                     + " changed the value of the variable \"" + p["Name"] + "\" to \"" + p[
+                                         "Value"] + "\""))
