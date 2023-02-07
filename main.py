@@ -391,23 +391,23 @@ def display_welcome_banner(release_packages):
 
 def display_package_diff_banner():
     print("")
-    print("====================================================================")
+    print("=======================================================================================")
     print("Added and removed packages and changes to package content")
-    print("====================================================================")
+    print("=======================================================================================")
 
 
 def display_variable_diff_banner():
     print("")
-    print("====================================================================")
-    print("Added and removed variables and changes to variable values")
-    print("====================================================================")
+    print("=======================================================================================")
+    print("Added and removed variables, changes to variable values, and changes to variable scopes")
+    print("=======================================================================================")
 
 
 def display_step_diff_banner():
     print("")
-    print("====================================================================")
+    print("=======================================================================================")
     print("Changes between the steps")
-    print("====================================================================")
+    print("=======================================================================================")
 
 
 def get_variable_changes(release_packages, print_new_variable, print_removed_variable, print_changed_variable, print_scope_changed):
