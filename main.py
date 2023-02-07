@@ -299,7 +299,7 @@ def print_added_files(releases, files, dest_package, source_package):
 
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
-              + " added the following files from "
+              + " added the following files in "
               + dest_package["id"] + "." + dest_package["version"]
               + " compared to release " + releases["source"]["Version"] + " with package "
               + source_package["id"] + "." + source_package["version"] + ":\n\t"
@@ -325,7 +325,7 @@ def print_changed_files(releases, files, dest_package, source_package):
 
     if len(files) != 0:
         print("Release " + releases["destination"]["Version"]
-              + " changed the following files from "
+              + " changed the following files in "
               + dest_package["id"] + "." + dest_package["version"]
               + " compared to release " + releases["source"]["Version"] + " with package "
               + source_package["id"] + "." + source_package["version"] + ":\n\t"
