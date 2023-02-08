@@ -371,7 +371,7 @@ def extract_package(dir, archive):
     return None
 
 
-def extract_packages(releases):
+def extract_packages(releases, temp_dir):
     """
     Extract the packages associated with the releases
     :param releases: The details of the release
@@ -620,7 +620,7 @@ if __name__ == '__main__':
                                       + " removed the package: " + p["id"]))
     temp_dir = tempfile.mkdtemp()
     release_packages_with_download = download_packages(args, space_id, release_packages, temp_dir)
-    release_packages_with_extract = extract_packages(release_packages_with_download)
+    release_packages_with_extract = extract_packages(release_packages_with_download, temp_dir)
     compare_directories(release_packages_with_extract,
                         lambda files, dest, source: print_added_files(releases, files, dest, source),
                         lambda files, dest, source: print_removed_files(releases, files, dest, source),

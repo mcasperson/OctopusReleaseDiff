@@ -88,6 +88,13 @@ variable "octopus_space_id" {
   sensitive   = false
   description = "The ID of the Octopus space to populate."
 }
+variable "echo_message" {
+  type        = string
+  nullable    = false
+  sensitive   = false
+  description = "The message to echo in the script step."
+  default = "hi"
+}
 
 # Import existing resources with the following commands:
 # RESOURCE_ID=$(curl -H "X-Octopus-ApiKey: ${OCTOPUS_CLI_API_KEY}" https://mattc.octopus.app/api/Spaces-282/Environments | jq -r '.Items[] | select(.Name=="Dev") | .Id')
@@ -208,7 +215,7 @@ resource "octopusdeploy_deployment_process" "deployment_process_project_released
       worker_pool_id                     = "${octopusdeploy_static_worker_pool.workerpool_temp.id}"
       properties                         = {
         "Octopus.Action.Script.Syntax" = "PowerShell"
-        "Octopus.Action.Script.ScriptBody" = "echo \"hi\""
+        "Octopus.Action.Script.ScriptBody" = "echo \"${var.echo_message}\""
         "Octopus.Action.Script.ScriptSource" = "Inline"
       }
       environments                       = []
