@@ -511,7 +511,7 @@ def print_changed_step(releases, step_changed):
         diff = difflib.unified_diff(source_json.split('\n'), dest_json.split('\n'))
         output = ""
         for line in diff:
-            output += line
+            output += line + "\n"
 
         step_changed(output)
 
