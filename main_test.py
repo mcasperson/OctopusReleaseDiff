@@ -115,10 +115,8 @@ class TestSum(unittest.TestCase):
                                                                                  main.get_variables)
 
             main.list_package_diff(release_packages,
-                                   lambda p: print("Release " + release_packages["destination"]["version"]
-                                                   + " added the package: " + p["id"]),
-                                   lambda p: print("Release " + release_packages["destination"]["version"]
-                                                   + " removed the package: " + p["id"]))
+                                   lambda p: self.fail("No packages were be added"),
+                                   lambda p: self.fail("No packages were be removed"))
             temp_dir = tempfile.mkdtemp()
             release_packages_with_download = main.download_packages(args, space_id, release_packages, temp_dir)
             release_packages_with_extract = main.extract_packages(release_packages_with_download, temp_dir)
@@ -163,10 +161,8 @@ class TestSum(unittest.TestCase):
                                                                                  main.get_variables)
 
             main.list_package_diff(release_packages,
-                                   lambda p: print("Release " + release_packages["destination"]["version"]
-                                                   + " added the package: " + p["id"]),
-                                   lambda p: print("Release " + release_packages["destination"]["version"]
-                                                   + " removed the package: " + p["id"]))
+                                   lambda p: self.fail("No packages were be added"),
+                                   lambda p: self.fail("No packages were be removed"))
             temp_dir = tempfile.mkdtemp()
             release_packages_with_download = main.download_packages(args, space_id, release_packages, temp_dir)
             release_packages_with_extract = main.extract_packages(release_packages_with_download, temp_dir)
