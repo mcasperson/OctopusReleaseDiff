@@ -246,3 +246,101 @@ resource "octopusdeploy_deployment_process" "deployment_process_project_released
   }
 }
 
+variable "releasedifftest_variable1_2" {
+  type        = string
+  nullable    = false
+  sensitive   = false
+  description = "The value associated with the variable Variable1"
+  default     = "value1"
+}
+resource "octopusdeploy_variable" "releasedifftest_variable1_2" {
+  owner_id     = "${octopusdeploy_project.project_releasedifftest.id}"
+  value        = "${var.releasedifftest_variable1_2}"
+  name         = "Variable1"
+  type         = "String"
+  is_sensitive = false
+
+  scope {
+    actions      = []
+    channels     = []
+    environments = []
+    machines     = []
+    roles        = null
+    tenant_tags  = null
+  }
+  depends_on = []
+}
+
+variable "releasedifftest_variable2_0" {
+  type        = string
+  nullable    = false
+  sensitive   = false
+  description = "The value associated with the variable Variable2"
+  default     = "value2"
+}
+resource "octopusdeploy_variable" "releasedifftest_variable2_0" {
+  owner_id     = "${octopusdeploy_project.project_releasedifftest.id}"
+  value        = "${var.releasedifftest_variable2_0}"
+  name         = "Variable2"
+  type         = "String"
+  is_sensitive = false
+
+  scope {
+    actions      = []
+    channels     = []
+    environments = ["${octopusdeploy_environment.environment_development.id}"]
+    machines     = []
+    roles        = null
+    tenant_tags  = null
+  }
+  depends_on = []
+}
+
+variable "releasedifftest_variable2_1" {
+  type        = string
+  nullable    = false
+  sensitive   = false
+  description = "The value associated with the variable Variable2"
+  default     = "value3"
+}
+resource "octopusdeploy_variable" "releasedifftest_variable2_1" {
+  owner_id     = "${octopusdeploy_project.project_releasedifftest.id}"
+  value        = "${var.releasedifftest_variable2_1}"
+  name         = "Variable2"
+  type         = "String"
+  description  = ""
+  is_sensitive = false
+
+  scope {
+    actions      = []
+    channels     = []
+    environments = ["${octopusdeploy_environment.environment_production.id}"]
+    machines     = []
+    roles        = null
+    tenant_tags  = null
+  }
+  depends_on = []
+}
+
+# Import existing resources with the following commands:
+# RESOURCE_ID=$(curl -H "X-Octopus-ApiKey: ${OCTOPUS_CLI_API_KEY}" https://mattc.octopus.app/api/Spaces-282/Environments | jq -r '.Items[] | select(.Name=="Development") | .Id')
+# terraform import octopusdeploy_environment.environment_development ${RESOURCE_ID}
+resource "octopusdeploy_environment" "environment_development" {
+  name                         = "Development"
+  description                  = ""
+  allow_dynamic_infrastructure = true
+  use_guided_failure           = false
+  sort_order                   = 0
+
+  jira_extension_settings {
+    environment_type = "unmapped"
+  }
+
+  jira_service_management_extension_settings {
+    is_enabled = false
+  }
+
+  servicenow_extension_settings {
+    is_enabled = false
+  }
+}

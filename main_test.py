@@ -103,47 +103,12 @@ class LambdaTracker:
     def was_called_with_data(self, call, data):
         return call in self.call_map.keys() and self.call_map[call] == data
 
+    def get_call(self, call):
+        return self.call_map[call]
+
 
 class TestSum(unittest.TestCase):
-    def test_package_change(self):
-        with DockerCompose(os.getcwd(), compose_file_name=["compose.yaml"], pull=True) as compose:
-            start_octopus()
-
-            create_release("0.0.1")
-            create_release("0.0.2")
-
-            args = build_args()
-
-            space_id = main.space_name_to_id(args)
-            project_id = main.project_name_to_id(args, space_id)
-            releases = main.get_release(args, space_id, project_id)
-            built_in_feed_id = main.get_built_in_feed_id(args, space_id)
-            release_packages = main.flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id,
-                                                                                 releases,
-                                                                                 main.get_deployment_process,
-                                                                                 main.get_variables)
-
-            main.list_package_diff(release_packages,
-                                   lambda p: self.fail("No packages were be added"),
-                                   lambda p: self.fail("No packages were be removed"))
-            temp_dir = tempfile.mkdtemp()
-            release_packages_with_download = main.download_packages(args, space_id, release_packages, temp_dir)
-            release_packages_with_extract = main.extract_packages(release_packages_with_download, temp_dir)
-            main.compare_directories(release_packages_with_extract,
-                                     lambda files, dest, source: self.assertTrue(len(files) == 0),
-                                     lambda files, dest, source: self.assertTrue(len(files) == 0),
-                                     lambda files, dest, source: self.assertIn("file.txt", files,
-                                                                               "files must contain file.txt"))
-
-            main.print_changed_step(release_packages, lambda output: self.fail("No steps must be changed"))
-
-            main.get_variable_changes(release_packages_with_extract,
-                                      lambda new: self.fail("No variables must be added"),
-                                      lambda new: self.fail("No variables must be removed"),
-                                      lambda new, old: self.fail("No variables must be changed"),
-                                      lambda new, old: self.fail("No variable scopes must be changed"))
-
-    def test_step_update(self):
+    def test_release_diff(self):
         call_tracker = LambdaTracker()
         with DockerCompose(os.getcwd(), compose_file_name=["compose.yaml"], pull=True) as compose:
             start_octopus()
@@ -152,7 +117,8 @@ class TestSum(unittest.TestCase):
 
             clear_steps()
 
-            apply_terraform(["-var=echo_message=there", "-var=package_id=anotherpackage"])
+            apply_terraform(["-var=echo_message=there", "-var=package_id=anotherpackage",
+                             "-var=releasedifftest_variable1_2=newvalue"])
 
             create_release("0.0.1")
 
@@ -179,8 +145,7 @@ class TestSum(unittest.TestCase):
             main.compare_directories(release_packages_with_extract,
                                      lambda files, dest, source: self.assertTrue(len(files) == 0),
                                      lambda files, dest, source: self.assertTrue(len(files) == 0),
-                                     lambda files, dest, source: self.assertIn("file.txt", files,
-                                                                               "files must contain file.txt"))
+                                     lambda files, dest, source: self.assertTrue(len(files) == 0))
 
             main.print_changed_step(release_packages, lambda output: call_tracker.track_call("step_changed"))
             self.assertTrue(call_tracker.was_called("step_changed"))
@@ -188,8 +153,56 @@ class TestSum(unittest.TestCase):
             main.get_variable_changes(release_packages_with_extract,
                                       lambda new: self.fail("No variables must be added"),
                                       lambda new: self.fail("No variables must be removed"),
-                                      lambda new, old: self.fail("No variables must be changed"),
+                                      lambda new, old: call_tracker.track_call_with_data("variable_changed",
+                                                                                         {'new': new, 'old': old}),
                                       lambda new, old: self.fail("No variable scopes must be changed"))
+
+            self.assertTrue(call_tracker.get_call("variable_changed")["new"]["Name"] == "Variable1",
+                            "The variable called \"Variable1\" must have been changed.")
+            self.assertTrue(call_tracker.get_call("variable_changed")["new"]["Value"] == "newvalue",
+                            "The variable called \"Variable1\" must have the new value \"newvalue\".")
+            self.assertTrue(call_tracker.get_call("variable_changed")["old"]["Name"] == "Variable1",
+                            "The variable called \"Variable1\" must have been changed.")
+            self.assertTrue(call_tracker.get_call("variable_changed")["old"]["Value"] == "value1",
+                            "The variable called \"Variable1\" must have been changed from \"value1\".")
+
+    def test_file_changes(self):
+        call_tracker = LambdaTracker()
+        with DockerCompose(os.getcwd(), compose_file_name=["compose.yaml"], pull=True) as compose:
+            start_octopus()
+
+            create_release("0.0.1")
+            create_release("0.0.2")
+
+            args = build_args()
+
+            space_id = main.space_name_to_id(args)
+            project_id = main.project_name_to_id(args, space_id)
+            releases = main.get_release(args, space_id, project_id)
+            built_in_feed_id = main.get_built_in_feed_id(args, space_id)
+            release_packages = main.flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id,
+                                                                                 releases,
+                                                                                 main.get_deployment_process,
+                                                                                 main.get_variables)
+
+            main.list_package_diff(release_packages,
+                                   lambda p: self.fail("No new packages added"),
+                                   lambda p: self.fail("No new packages removed"))
+
+            temp_dir = tempfile.mkdtemp()
+            release_packages_with_download = main.download_packages(args, space_id, release_packages, temp_dir)
+            release_packages_with_extract = main.extract_packages(release_packages_with_download, temp_dir)
+            main.compare_directories(release_packages_with_extract,
+                                     lambda files, dest, source: call_tracker.track_call_with_data("files_added",
+                                                                                                   files),
+                                     lambda files, dest, source: call_tracker.track_call_with_data("files_removed",
+                                                                                                   files),
+                                     lambda files, dest, source: call_tracker.track_call_with_data("files_changed",
+                                                                                                   files))
+
+            self.assertTrue("file.txt" in call_tracker.get_call("files_changed"))
+            self.assertTrue("file2.txt" in call_tracker.get_call("files_added"))
+            self.assertTrue("file3.txt" in call_tracker.get_call("files_removed"))
 
 
 if __name__ == '__main__':
