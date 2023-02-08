@@ -5,6 +5,8 @@ import subprocess
 import tempfile
 import time
 import unittest
+
+import numpy as np
 import requests
 from testcontainers.compose import DockerCompose
 import main
@@ -25,6 +27,14 @@ def wait_for_resource_available(url, timeout):
             timer += 10
 
 
+def apply_terraform(vars):
+    args = ["terraform", "apply", "-auto-approve", "-var=octopus_server=http://localhost:8080",
+            "-var=octopus_apikey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345",
+            "-var=octopus_space_id=Spaces-1"]
+    p = subprocess.Popen(np.concatenate((args, vars)), cwd="test/terraform")
+    p.communicate()
+
+
 def start_octopus():
     wait_for_resource_available("http://localhost:8080/api", 60)
 
@@ -35,15 +45,41 @@ def start_octopus():
 
     p = subprocess.Popen(["terraform", "init"], cwd="test/terraform")
     p.communicate()
-    p = subprocess.Popen(["terraform", "apply", "-auto-approve", "-var=octopus_server=http://localhost:8080",
-                          "-var=octopus_apikey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345",
-                          "-var=octopus_space_id=Spaces-1"], cwd="test/terraform")
-    p.communicate()
+
+    apply_terraform([])
 
     p = subprocess.Popen(
         ["octo", "push", "--package=test/packages/package.0.0.1.zip", "--package=test/packages/package.0.0.2.zip",
          "--server=http://localhost:8080", "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
     p.communicate()
+
+
+def build_args():
+    return type('obj', (object,), {
+        "octopus_url": "http://localhost:8080",
+        "octopus_api_key": "API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345",
+        "octopus_space": "Default",
+        "octopus_project": "ReleaseDiffTest",
+        "old_release": None,
+        "new_release": None
+    })
+
+
+def create_release(package_version):
+    p = subprocess.Popen(
+        ["octo", "create-release", "--project=ReleaseDiffTest", "--defaultPackageVersion=" + package_version,
+         "--server=http://localhost:8080", "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
+    p.communicate()
+
+
+def clear_steps():
+    deployment_process = requests.get(
+        "http://localhost:8080/api/Spaces-1/deploymentprocesses/deploymentprocess-Projects-1",
+        headers={"X-Octopus-ApiKey": "API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"}).json()
+    deployment_process["Steps"] = []
+    requests.put("http://localhost:8080/api/Spaces-1/deploymentprocesses/deploymentprocess-Projects-1",
+                 json.dumps(deployment_process),
+                 headers={"X-Octopus-ApiKey": "API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"})
 
 
 class LambdaTracker:
@@ -64,24 +100,10 @@ class TestSum(unittest.TestCase):
                            pull=True) as compose:
             start_octopus()
 
-            p = subprocess.Popen(
-                ["octo", "create-release", "--project=ReleaseDiffTest", "--defaultPackageVersion=0.0.1",
-                 "--server=http://localhost:8080", "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
-            p.communicate()
+            create_release("0.0.1")
+            create_release("0.0.2")
 
-            p = subprocess.Popen(
-                ["octo", "create-release", "--project=ReleaseDiffTest", "--defaultPackageVersion=0.0.2",
-                 "--server=http://localhost:8080", "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
-            p.communicate()
-
-            args = type('obj', (object,), {
-                "octopus_url": "http://localhost:8080",
-                "octopus_api_key": "API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345",
-                "octopus_space": "Default",
-                "octopus_project": "ReleaseDiffTest",
-                "old_release": None,
-                "new_release": None
-            })
+            args = build_args()
 
             space_id = main.space_name_to_id(args)
             project_id = main.project_name_to_id(args, space_id)
@@ -109,10 +131,10 @@ class TestSum(unittest.TestCase):
             main.print_changed_step(release_packages, lambda output: self.fail("No steps must be changed"))
 
             main.get_variable_changes(release_packages_with_extract,
-                                 lambda new: self.fail("No variables must be added"),
-                                 lambda new: self.fail("No variables must be removed"),
-                                 lambda new, old: self.fail("No variables must be changed"),
-                                 lambda new, old: self.fail("No variable scopes must be changed"))
+                                      lambda new: self.fail("No variables must be added"),
+                                      lambda new: self.fail("No variables must be removed"),
+                                      lambda new, old: self.fail("No variables must be changed"),
+                                      lambda new, old: self.fail("No variable scopes must be changed"))
 
     def test_step_update(self):
         call_tracker = LambdaTracker()
@@ -121,33 +143,15 @@ class TestSum(unittest.TestCase):
                            pull=True) as compose:
             start_octopus()
 
-            p = subprocess.Popen(
-                ["octo", "create-release", "--project=ReleaseDiffTest", "--defaultPackageVersion=0.0.1",
-                 "--server=http://localhost:8080", "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
-            p.communicate()
+            create_release("0.0.1")
 
-            deployment_process = requests.get("http://localhost:8080/api/Spaces-1/deploymentprocesses/deploymentprocess-Projects-1", headers={"X-Octopus-ApiKey": "API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"}).json()
-            deployment_process["Steps"] = []
-            requests.put("http://localhost:8080/api/Spaces-1/deploymentprocesses/deploymentprocess-Projects-1", json.dumps(deployment_process), headers={"X-Octopus-ApiKey": "API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"})
+            clear_steps()
 
-            p = subprocess.Popen(["terraform", "apply", "-auto-approve", "-var=octopus_server=http://localhost:8080",
-                                  "-var=octopus_apikey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345",
-                                  "-var=octopus_space_id=Spaces-1", "-var=echo_message=there"], cwd="test/terraform")
-            p.communicate()
+            apply_terraform(["-var=echo_message=there"])
 
-            p = subprocess.Popen(
-                ["octo", "create-release", "--project=ReleaseDiffTest", "--defaultPackageVersion=0.0.2",
-                 "--server=http://localhost:8080", "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
-            p.communicate()
+            create_release("0.0.2")
 
-            args = type('obj', (object,), {
-                "octopus_url": "http://localhost:8080",
-                "octopus_api_key": "API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345",
-                "octopus_space": "Default",
-                "octopus_project": "ReleaseDiffTest",
-                "old_release": None,
-                "new_release": None
-            })
+            args = build_args()
 
             space_id = main.space_name_to_id(args)
             project_id = main.project_name_to_id(args, space_id)
@@ -176,10 +180,10 @@ class TestSum(unittest.TestCase):
             self.assertTrue(call_tracker.was_called("step_changed"))
 
             main.get_variable_changes(release_packages_with_extract,
-                                 lambda new: self.fail("No variables must be added"),
-                                 lambda new: self.fail("No variables must be removed"),
-                                 lambda new, old: self.fail("No variables must be changed"),
-                                 lambda new, old: self.fail("No variable scopes must be changed"))
+                                      lambda new: self.fail("No variables must be added"),
+                                      lambda new: self.fail("No variables must be removed"),
+                                      lambda new, old: self.fail("No variables must be changed"),
+                                      lambda new, old: self.fail("No variable scopes must be changed"))
 
 
 if __name__ == '__main__':
