@@ -1,5 +1,3 @@
-
-
 # Import existing resources with the following commands:
 # RESOURCE_ID=$(curl -H "X-Octopus-ApiKey: ${OCTOPUS_CLI_API_KEY}" https://mattc.octopus.app/api/Spaces-282/Environments | jq -r '.Items[] | select(.Name=="Test") | .Id')
 # terraform import octopusdeploy_environment.environment_test ${RESOURCE_ID}
@@ -93,7 +91,14 @@ variable "echo_message" {
   nullable    = false
   sensitive   = false
   description = "The message to echo in the script step."
-  default = "hi"
+  default     = "hi"
+}
+variable "package_id" {
+  type        = string
+  nullable    = false
+  sensitive   = false
+  description = "The message to echo in the script step."
+  default     = "package"
 }
 
 # Import existing resources with the following commands:
@@ -214,18 +219,18 @@ resource "octopusdeploy_deployment_process" "deployment_process_project_released
       is_required                        = false
       worker_pool_id                     = "${octopusdeploy_static_worker_pool.workerpool_temp.id}"
       properties                         = {
-        "Octopus.Action.Script.Syntax" = "PowerShell"
-        "Octopus.Action.Script.ScriptBody" = "echo \"${var.echo_message}\""
+        "Octopus.Action.Script.Syntax"       = "PowerShell"
+        "Octopus.Action.Script.ScriptBody"   = "echo \"${var.echo_message}\""
         "Octopus.Action.Script.ScriptSource" = "Inline"
       }
-      environments                       = []
-      excluded_environments              = []
-      channels                           = []
-      tenant_tags                        = []
+      environments          = []
+      excluded_environments = []
+      channels              = []
+      tenant_tags           = []
 
       package {
-        name                      = "package"
-        package_id                = "package"
+        name                      = "${var.package_id}"
+        package_id                = "${var.package_id}"
         acquisition_location      = "Server"
         extract_during_deployment = false
         feed_id                   = "${data.octopusdeploy_feeds.built_in_feed.feeds[0].id}"

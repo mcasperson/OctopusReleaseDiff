@@ -78,6 +78,7 @@ def space_name_to_id(args):
 
     url = args.octopus_url + "/api/Spaces?partialName=" + urllib.parse.quote(args.octopus_space.strip()) + "&take=1000"
     response = get(url, headers=get_octopus_headers(args))
+    response.raise_for_status()
     spaces_json = response.json()
 
     filtered_items = [a for a in spaces_json["Items"] if a["Name"] == args.octopus_space.strip()]
@@ -104,6 +105,7 @@ def project_name_to_id(args, space_id):
     url = args.octopus_url + "/api/" + space_id + "/Projects?take=1000&partialName=" + urllib.parse.quote(
         args.octopus_project.strip())
     response = get(url, headers=get_octopus_headers(args))
+    response.raise_for_status()
     response_json = response.json()
 
     filtered_items = [a for a in response_json["Items"] if a["Name"] == args.octopus_project.strip()]
@@ -130,6 +132,7 @@ def get_release(args, space_id, project_id):
 
     url = args.octopus_url + "/api/" + space_id + "/Projects/" + project_id + "/Releases"
     response = get(url, headers=get_octopus_headers(args))
+    response.raise_for_status()
     response_json = response.json()
 
     # We need at least two releases to do a comparison
@@ -175,6 +178,7 @@ def get_deployment_process(args, space_id, deployment_process_id):
 
     url = args.octopus_url + "/api/" + space_id + "/DeploymentProcesses/" + deployment_process_id
     response = get(url, headers=get_octopus_headers(args))
+    response.raise_for_status()
     return response.json()
 
 
@@ -192,6 +196,7 @@ def get_variables(args, space_id, variables_is):
 
     url = args.octopus_url + "/api/" + space_id + "/Variables/" + variables_is
     response = get(url, headers=get_octopus_headers(args))
+    response.raise_for_status()
     return response.json()
 
 
@@ -208,6 +213,7 @@ def get_built_in_feed_id(args, space_id):
 
     url = args.octopus_url + "/api/" + space_id + "/Feeds?take=1000"
     response = get(url, headers=get_octopus_headers(args))
+    response.raise_for_status()
     built_in_feed = [a for a in response.json()["Items"] if a["FeedType"] == "BuiltIn"]
 
     if len(built_in_feed) == 1:
@@ -327,6 +333,7 @@ def download_packages(args, space_id, release_packages, path):
     return release_packages
 
 
+@retry(stop_max_attempt_number=3, wait_fixed=2000)
 def download_package(args, space_id, package_id, package_version, path):
     """
     Download a package from the built-in feed
@@ -342,10 +349,12 @@ def download_package(args, space_id, package_id, package_version, path):
 
     url = args.octopus_url + "/api/" + space_id + "/Packages/packages-" + package_id + "." + package_version
     response = get(url, headers=get_octopus_headers(args))
+    response.raise_for_status()
     package = response.json()
 
     url = args.octopus_url + "/api/" + space_id + "/Packages/packages-" + package_id + "." + package_version + "/raw"
     response = get(url, headers=get_octopus_headers(args))
+    response.raise_for_status()
     file_path = os.path.join(path, package_id + "." + package_version + package['FileExtension'])
     with open(file_path, "wb") as f:
         f.write(response.content)

@@ -49,8 +49,13 @@ def start_octopus():
     apply_terraform([])
 
     p = subprocess.Popen(
-        ["octo", "push", "--package=test/packages/package.0.0.1.zip", "--package=test/packages/package.0.0.2.zip",
-         "--server=http://localhost:8080", "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
+        ["octo",
+         "push",
+         "--package=test/packages/package.0.0.1.zip",
+         "--package=test/packages/package.0.0.2.zip",
+         "--package=test/packages/anotherpackage.0.0.1.zip",
+         "--server=http://localhost:8080",
+         "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
     p.communicate()
 
 
@@ -89,15 +94,19 @@ class LambdaTracker:
     def track_call(self, call):
         self.call_map[call] = True
 
+    def track_call_with_data(self, call, data):
+        self.call_map[call] = data
+
     def was_called(self, call):
         return call in self.call_map.keys()
+
+    def was_called_with_data(self, call, data):
+        return call in self.call_map.keys() and self.call_map[call] == data
 
 
 class TestSum(unittest.TestCase):
     def test_package_change(self):
-        with DockerCompose(os.getcwd(),
-                           compose_file_name=["compose.yaml"],
-                           pull=True) as compose:
+        with DockerCompose(os.getcwd(), compose_file_name=["compose.yaml"], pull=True) as compose:
             start_octopus()
 
             create_release("0.0.1")
@@ -136,18 +145,16 @@ class TestSum(unittest.TestCase):
 
     def test_step_update(self):
         call_tracker = LambdaTracker()
-        with DockerCompose(os.getcwd(),
-                           compose_file_name=["compose.yaml"],
-                           pull=True) as compose:
+        with DockerCompose(os.getcwd(), compose_file_name=["compose.yaml"], pull=True) as compose:
             start_octopus()
 
             create_release("0.0.1")
 
             clear_steps()
 
-            apply_terraform(["-var=echo_message=there"])
+            apply_terraform(["-var=echo_message=there", "-var=package_id=anotherpackage"])
 
-            create_release("0.0.2")
+            create_release("0.0.1")
 
             args = build_args()
 
@@ -161,8 +168,11 @@ class TestSum(unittest.TestCase):
                                                                                  main.get_variables)
 
             main.list_package_diff(release_packages,
-                                   lambda p: self.fail("No packages were be added"),
-                                   lambda p: self.fail("No packages were be removed"))
+                                   lambda p: call_tracker.track_call_with_data("package_added", p["id"]),
+                                   lambda p: call_tracker.track_call_with_data("package_removed", p["id"]))
+            self.assertTrue(call_tracker.was_called_with_data("package_added", "anotherpackage"))
+            self.assertTrue(call_tracker.was_called_with_data("package_removed", "package"))
+
             temp_dir = tempfile.mkdtemp()
             release_packages_with_download = main.download_packages(args, space_id, release_packages, temp_dir)
             release_packages_with_extract = main.extract_packages(release_packages_with_download, temp_dir)
