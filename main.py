@@ -487,22 +487,24 @@ def print_changed_files(releases, files, dest_package, source_package):
                     print(line)
 
 
-def print_changed_step(release):
+def print_changed_step(releases, step_changed):
     """
     Print the details of any changed steps
-    :param release: The details of the releases to compare
+    :param releases: The details of the releases to compare
     """
-    if releases is None or release.get("source") is None or release.get("destination") is None:
+    if releases is None or releases.get("source") is None or releases.get("destination") is None:
         return
 
-    source_json = json.dumps(release["source"]["deployment_process"]["Steps"], indent=2)
-    dest_json = json.dumps(release["destination"]["deployment_process"]["Steps"], indent=2)
+    source_json = json.dumps(releases["source"]["deployment_process"]["Steps"], indent=2)
+    dest_json = json.dumps(releases["destination"]["deployment_process"]["Steps"], indent=2)
 
     if source_json != dest_json:
         diff = difflib.unified_diff(source_json.split('\n'), dest_json.split('\n'))
-        print("Changed detected in the deployment process:")
+        output = ""
         for line in diff:
-            print(line)
+            output += line
+
+        step_changed(output)
 
 
 def display_welcome_banner(release_packages):
@@ -547,7 +549,8 @@ def display_step_diff_banner():
     print("=======================================================================================")
 
 
-def get_variable_changes(release_packages, print_new_variable, print_removed_variable, print_changed_variable, print_scope_changed):
+def get_variable_changes(release_packages, print_new_variable, print_removed_variable, print_changed_variable,
+                         print_scope_changed):
     """
     Determine any changes to variables between the two releases.
     :param release_packages: The details of the releases to compare
@@ -581,53 +584,60 @@ def get_variable_changes(release_packages, print_new_variable, print_removed_var
         for variable in release_packages["destination"]["variables"]:
             diff = [a for a in release_packages["source"]["variables"] if
                     a["Id"] == variable["Id"] and (
-                        not np.array_equiv(a["Scope"].get("Environment") or [], variable["Scope"].get("Environment") or [])
-                        or not np.array_equiv(a["Scope"].get("Machines") or [], variable["Scope"].get("Machines") or [])
-                        or not np.array_equiv(a["Scope"].get("Actions") or [], variable["Scope"].get("Actions") or [])
-                        or not np.array_equiv(a["Scope"].get("Roles") or [], variable["Scope"].get("Roles") or [])
-                        or not np.array_equiv(a["Scope"].get("Channels") or [], variable["Scope"].get("Channels") or [])
-                        or not np.array_equiv(a["Scope"].get("TenantTags") or [], variable["Scope"].get("TenantTags") or [])
-                        or not np.array_equiv(a["Scope"].get("Processes") or [], variable["Scope"].get("Processes") or [])
+                            not np.array_equiv(a["Scope"].get("Environment") or [],
+                                               variable["Scope"].get("Environment") or [])
+                            or not np.array_equiv(a["Scope"].get("Machines") or [],
+                                                  variable["Scope"].get("Machines") or [])
+                            or not np.array_equiv(a["Scope"].get("Actions") or [],
+                                                  variable["Scope"].get("Actions") or [])
+                            or not np.array_equiv(a["Scope"].get("Roles") or [], variable["Scope"].get("Roles") or [])
+                            or not np.array_equiv(a["Scope"].get("Channels") or [],
+                                                  variable["Scope"].get("Channels") or [])
+                            or not np.array_equiv(a["Scope"].get("TenantTags") or [],
+                                                  variable["Scope"].get("TenantTags") or [])
+                            or not np.array_equiv(a["Scope"].get("Processes") or [],
+                                                  variable["Scope"].get("Processes") or [])
                     )]
             if len(diff) != 0:
                 print_scope_changed(variable, diff[0])
 
 
-args = get_args()
-space_id = space_name_to_id(args)
-project_id = project_name_to_id(args, space_id)
-releases = get_release(args, space_id, project_id)
-built_in_feed_id = get_built_in_feed_id(args, space_id)
-release_packages = flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id, releases,
-                                                                get_deployment_process, get_variables)
-display_welcome_banner(release_packages)
+if __name__ == '__main__':
+    args = get_args()
+    space_id = space_name_to_id(args)
+    project_id = project_name_to_id(args, space_id)
+    releases = get_release(args, space_id, project_id)
+    built_in_feed_id = get_built_in_feed_id(args, space_id)
+    release_packages = flatten_release_with_packages_and_deployment(args, built_in_feed_id, space_id, releases,
+                                                                    get_deployment_process, get_variables)
+    display_welcome_banner(release_packages)
 
-display_package_diff_banner()
-list_package_diff(release_packages,
-                  lambda p: print("Release " + release_packages["destination"]["version"]
-                                  + " added the package: " + p["id"]),
-                  lambda p: print("Release " + release_packages["destination"]["version"]
-                                  + " removed the package: " + p["id"]))
-temp_dir = tempfile.mkdtemp()
-release_packages_with_download = download_packages(args, space_id, release_packages, temp_dir)
-release_packages_with_extract = extract_packages(release_packages_with_download)
-compare_directories(release_packages_with_extract,
-                    lambda files, dest, source: print_added_files(releases, files, dest, source),
-                    lambda files, dest, source: print_removed_files(releases, files, dest, source),
-                    lambda files, dest, source: print_changed_files(releases, files, dest, source))
+    display_package_diff_banner()
+    list_package_diff(release_packages,
+                      lambda p: print("Release " + release_packages["destination"]["version"]
+                                      + " added the package: " + p["id"]),
+                      lambda p: print("Release " + release_packages["destination"]["version"]
+                                      + " removed the package: " + p["id"]))
+    temp_dir = tempfile.mkdtemp()
+    release_packages_with_download = download_packages(args, space_id, release_packages, temp_dir)
+    release_packages_with_extract = extract_packages(release_packages_with_download)
+    compare_directories(release_packages_with_extract,
+                        lambda files, dest, source: print_added_files(releases, files, dest, source),
+                        lambda files, dest, source: print_removed_files(releases, files, dest, source),
+                        lambda files, dest, source: print_changed_files(releases, files, dest, source))
 
-display_step_diff_banner()
-print_changed_step(release_packages)
+    display_step_diff_banner()
+    print_changed_step(release_packages, lambda output: print(output))
 
-display_variable_diff_banner()
-get_variable_changes(release_packages_with_extract,
-                     lambda new: print("Release " + release_packages["destination"]["version"]
-                                       + " added the variable: " + new["Name"]),
-                     lambda new: print("Release " + release_packages["destination"]["version"]
-                                       + " removed the variable: " + new["Name"]),
-                     lambda new, old: print("Release " + release_packages["destination"]["version"]
-                                            + " changed the value of the variable \"" + new["Name"] + "\" from \"" +
-                                            old["Value"] + "\" to \"" + new[
-                                                "Value"] + "\""),
-                     lambda new, old: print("Release " + release_packages["destination"]["version"]
-                                            + " changed the scope of the variable \"" + new["Name"] + "\""))
+    display_variable_diff_banner()
+    get_variable_changes(release_packages_with_extract,
+                         lambda new: print("Release " + release_packages["destination"]["version"]
+                                           + " added the variable: " + new["Name"]),
+                         lambda new: print("Release " + release_packages["destination"]["version"]
+                                           + " removed the variable: " + new["Name"]),
+                         lambda new, old: print("Release " + release_packages["destination"]["version"]
+                                                + " changed the value of the variable \"" + new["Name"] + "\" from \"" +
+                                                old["Value"] + "\" to \"" + new[
+                                                    "Value"] + "\""),
+                         lambda new, old: print("Release " + release_packages["destination"]["version"]
+                                                + " changed the scope of the variable \"" + new["Name"] + "\""))
