@@ -151,8 +151,8 @@ def get_release(args, space_id, project_id):
 
     if len(source) == 1 and len(dest) == 1:
         return {
-            "source": source,
-            "destination": dest
+            "source": source[0],
+            "destination": dest[0]
         }
 
     if len(source) != 1:
