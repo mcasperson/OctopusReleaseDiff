@@ -74,8 +74,8 @@ def print_output_var(name, value):
     :param value: The variable value
     """
     print("##octopus[setVariable name='" + base64.b64encode(
-        name.encode("ascii")) + "' value='" + base64.b64encode(
-        value.encode("ascii")) + "']")
+        name.encode("ascii")).decode("ascii") + "' value='" + base64.b64encode(
+        value.encode("ascii")).decode("ascii") + "']")
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
