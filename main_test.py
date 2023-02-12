@@ -33,6 +33,7 @@ def apply_terraform(vars):
             "-var=octopus_space_id=Spaces-1"]
     p = subprocess.Popen(np.concatenate((args, vars)), cwd="test/terraform")
     p.communicate()
+    time.sleep(10)
 
 
 def start_octopus():
@@ -57,6 +58,7 @@ def start_octopus():
          "--server=http://localhost:8080",
          "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
     p.communicate()
+    time.sleep(10)
 
 
 def build_args():
@@ -75,6 +77,7 @@ def create_release(package_version):
         ["octo", "create-release", "--project=ReleaseDiffTest", "--defaultPackageVersion=" + package_version,
          "--server=http://localhost:8080", "--apiKey=API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"])
     p.communicate()
+    time.sleep(10)
 
 
 def clear_steps():
@@ -120,8 +123,6 @@ class TestSum(unittest.TestCase):
             apply_terraform(["-var=echo_message=there", "-var=package_id=anotherpackage",
                              "-var=releasedifftest_variable1_2=newvalue"])
 
-            time.sleep(10)
-
             create_release("0.0.1")
 
             args = build_args()
@@ -156,7 +157,8 @@ class TestSum(unittest.TestCase):
                                       lambda vars: self.assertTrue(len(vars) == 0, "No variables must be added"),
                                       lambda vars: self.assertTrue(len(vars) == 0, "No variables must be removed"),
                                       lambda vars: call_tracker.track_call_with_data("variable_changed", vars),
-                                      lambda vars: self.assertTrue(len(vars) == 0, "No variable scopes must be changed"))
+                                      lambda vars: self.assertTrue(len(vars) == 0,
+                                                                   "No variable scopes must be changed"))
 
             self.assertTrue(call_tracker.get_call("variable_changed")[0]["Name"] == "Variable1",
                             "The variable called \"Variable1\" must have been changed.")
