@@ -550,7 +550,6 @@ def output_changed_files(releases, files, dest_package, source_package):
             or releases.get("source") is None or releases.get("destination") is None:
         return None
 
-
     print_output_var("Files[" + dest_package["id"] + "].Changed", ",".join(files))
 
     for file in files:
