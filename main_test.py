@@ -120,6 +120,8 @@ class TestSum(unittest.TestCase):
             apply_terraform(["-var=echo_message=there", "-var=package_id=anotherpackage",
                              "-var=releasedifftest_variable1_2=newvalue"])
 
+            time.sleep(10)
+
             create_release("0.0.1")
 
             args = build_args()
@@ -167,6 +169,8 @@ class TestSum(unittest.TestCase):
         call_tracker = LambdaTracker()
         with DockerCompose(os.getcwd(), compose_file_name=["compose.yaml"], pull=True) as compose:
             start_octopus()
+
+            time.sleep(10)
 
             create_release("0.0.1")
             create_release("0.0.2")

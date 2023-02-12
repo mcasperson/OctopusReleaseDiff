@@ -614,6 +614,7 @@ def output_changed_scope_variable(vars):
 
     output_vars_as_json(vars, "ScopeChanged")
 
+
 def output_vars_as_json(vars, key):
     """
     Print the details of changes variables
@@ -627,7 +628,6 @@ def output_vars_as_json(vars, key):
         named_vars = [a for a in vars if a["Name"] == var_name]
         for index, var in enumerate(named_vars):
             print_output_var("Variables[" + var["Name"] + " " + index + "]." + key, json.dumps(var))
-
 
 
 def print_changed_step(releases, step_changed):
