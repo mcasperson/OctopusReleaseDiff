@@ -151,19 +151,16 @@ class TestSum(unittest.TestCase):
             self.assertTrue(call_tracker.was_called("step_changed"))
 
             main.get_variable_changes(release_packages_with_extract,
-                                      lambda new: self.fail("No variables must be added"),
-                                      lambda new: self.fail("No variables must be removed"),
-                                      lambda new, old: call_tracker.track_call_with_data("variable_changed",
-                                                                                         {'new': new, 'old': old}),
-                                      lambda new, old: self.fail("No variable scopes must be changed"))
+                                      lambda vars: self.assertTrue(len(vars) == 0, "No variables must be added"),
+                                      lambda vars: self.assertTrue(len(vars) == 0, "No variables must be removed"),
+                                      lambda vars: call_tracker.track_call_with_data("variable_changed", vars),
+                                      lambda vars: self.assertTrue(len(vars) == 0, "No variable scopes must be changed"))
 
-            self.assertTrue(call_tracker.get_call("variable_changed")["new"]["Name"] == "Variable1",
+            self.assertTrue(call_tracker.get_call("variable_changed")[0]["Name"] == "Variable1",
                             "The variable called \"Variable1\" must have been changed.")
-            self.assertTrue(call_tracker.get_call("variable_changed")["new"]["Value"] == "newvalue",
+            self.assertTrue(call_tracker.get_call("variable_changed")[0]["Value"] == "newvalue",
                             "The variable called \"Variable1\" must have the new value \"newvalue\".")
-            self.assertTrue(call_tracker.get_call("variable_changed")["old"]["Name"] == "Variable1",
-                            "The variable called \"Variable1\" must have been changed.")
-            self.assertTrue(call_tracker.get_call("variable_changed")["old"]["Value"] == "value1",
+            self.assertTrue(call_tracker.get_call("variable_changed")[0]["OldValue"] == "value1",
                             "The variable called \"Variable1\" must have been changed from \"value1\".")
 
     def test_file_changes(self):

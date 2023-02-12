@@ -17,3 +17,18 @@ python main.py \
     --octopusSpace Default \
     --octopusProject "The Project Name"
 ```
+
+## Output Variables
+
+This script generates many [Octopus output variables](https://octopus.com/docs/projects/variables/output-variables)
+that allows the results of the release diff to be consumed in subsequent steps.
+
+* `Files[<package id>].Added` is a comma separated list of files added in the package referenced by the new release.
+* `Files[<package id>].Removed` is a comma separated list of files removed in the package referenced by the new release.
+* `Files[<package id>].Changed` is a comma separated list of files changed in the package referenced by the new release.
+* `FileDiff[<package id>].<file>` is the diff of a file that changed between the two releases.
+* `Variables.Added` is a comma separated list of variables added in this release.
+* `Variables.Removed` is a comma separated list of variables removed in this release.
+* `Variables.Changed` is a comma separated list of variables changed in this release.
+* `Variables.ScopeChanged` is a comma separated list of variables changed in this release.
+* `Variables[<variable name>].Json` is a JSON representation of the named variable whose value or scope has changed.

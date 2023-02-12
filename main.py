@@ -1,4 +1,5 @@
 import argparse
+import base64
 import difflib
 import filecmp
 import json
@@ -64,6 +65,17 @@ def get_octopus_headers(args):
     if args is None:
         return None
     return {"X-Octopus-ApiKey": args.octopus_api_key}
+
+
+def print_output_var(name, value):
+    """
+    Creates an Octopus output variable
+    :param name: The variable name
+    :param value: The variable value
+    """
+    print("##octopus[setVariable name='" + base64.b64encode(
+        name.encode("ascii")) + "' value='" + base64.b64encode(
+        value.encode("ascii")) + "']")
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=2000)
@@ -443,6 +455,22 @@ def print_added_files(releases, files, dest_package, source_package):
               + "\n\t".join(files))
 
 
+def output_added_files(releases, files, dest_package, source_package):
+    """
+    Captures the details of added files as output variables
+    :param releases: The details of the releases to be compared
+    :param files: The list of files added
+    :param dest_package: The new package details
+    :param source_package: The old package details
+    """
+    if releases is None or files is None or dest_package is None or source_package is None \
+            or releases.get("source") is None or releases.get("destination") is None:
+        return
+
+    if len(files) != 0:
+        print_output_var("Files[" + dest_package["id"] + "].Added", ",".join(files))
+
+
 def print_removed_files(releases, files, dest_package, source_package):
     """
     Print the details of removed files
@@ -462,6 +490,22 @@ def print_removed_files(releases, files, dest_package, source_package):
               + " compared to release " + releases["source"]["Version"] + " with package "
               + source_package["id"] + "." + source_package["version"] + ":\n\t"
               + "\n\t".join(files))
+
+
+def output_removed_files(releases, files, dest_package, source_package):
+    """
+    Captures the details of removed files as output variables
+    :param releases: The details of the releases to be compared
+    :param files: The list of files removed
+    :param dest_package: The new package details
+    :param source_package: The old package details
+    """
+    if releases is None or files is None or dest_package is None or source_package is None \
+            or releases.get("source") is None or releases.get("destination") is None:
+        return
+
+    if len(files) != 0:
+        print_output_var("Files[" + dest_package["id"] + "].Removed", ",".join(files))
 
 
 def print_changed_files(releases, files, dest_package, source_package):
@@ -494,6 +538,88 @@ def print_changed_files(releases, files, dest_package, source_package):
                 print("Diff of " + file + ":")
                 for line in difflib.unified_diff(text1, text2):
                     print(line)
+
+
+def output_changed_files(releases, files, dest_package, source_package):
+    """
+    Print the details of changes files
+    :param releases: The details of the releases to be compared
+    :param files: The list of files changed
+    :param dest_package: The new package details
+    :param source_package: The old package details
+    """
+    if releases is None or files is None or dest_package is None or source_package is None \
+            or releases.get("source") is None or releases.get("destination") is None:
+        return None
+
+    if len(files) != 0:
+        print_output_var("Files[" + dest_package["id"] + "].Changed", ",".join(files))
+
+        for file in files:
+            source_file = os.path.join(source_package["extracted"], file)
+            dest_file = os.path.join(dest_package["extracted"], file)
+            if not (is_binary(source_file) or is_binary(dest_file)):
+                text1 = open(source_file).readlines()
+                text2 = open(dest_file).readlines()
+                full_diff = ""
+                for line in difflib.unified_diff(text1, text2):
+                    full_diff += line
+                print_output_var("FileDiff[" + dest_package["id"] + "]." + file, full_diff)
+
+
+def output_added_variable(vars):
+    """
+    Print the details of added variables
+    :param vars: The list of added variables
+    """
+    if vars is None:
+        return
+
+    print_output_var("Variables.Added", ",".join(map(lambda var: var["Name"], vars)))
+
+
+def output_removed_variable(vars):
+    """
+    Print the details of removed variables
+    :param vars: The list of removed variables
+    """
+    if vars is None:
+        return
+
+    print_output_var("Variables.Removed", ",".join(map(lambda var: var["Name"], vars)))
+
+
+def output_changed_variable(vars):
+    """
+    Print the details of changes variables
+    :param vars: The changed variables
+    """
+    if vars is None:
+        return None
+
+    print_output_var("Variables.Changed", ",".join(map(lambda var: var["Name"], vars)))
+
+    var_names = set(map(lambda var: var["Name]"], vars))
+    for var_name in var_names:
+        named_vars = [a for a in vars if a["Name"] == var_name]
+        for index, var in enumerate(named_vars):
+            print_output_var("Variables[" + var["Name"] + " " + index + "].Json", json.dumps(var))
+
+
+def output_changed_scope_variable(vars):
+    """
+    Print the details of changes variables
+    :param vars: The changed variables
+    """
+    if vars is None:
+        return None
+
+    var_names = set(map(lambda var: var["Name]"], vars))
+    for var_name in var_names:
+        named_vars = [a for a in vars if a["Name"] == var_name]
+        for index, var in enumerate(named_vars):
+            print_output_var("Variables[" + var["Name"] + " " + index + "].Json", json.dumps(var))
+
 
 
 def print_changed_step(releases, step_changed):
@@ -573,23 +699,34 @@ def get_variable_changes(release_packages, print_new_variable, print_removed_var
         return
 
     if print_new_variable is not None:
+        new_variables = []
         for variable in release_packages["destination"]["variables"]:
             if len([a for a in release_packages["source"]["variables"] if a["Name"] == variable["Name"]]) == 0:
-                print_new_variable(variable)
+                new_variables.append(variable)
+
+        print_new_variable(new_variables)
 
     if print_removed_variable is not None:
+        removed_variables = []
         for variable in release_packages["source"]["variables"]:
             if len([a for a in release_packages["destination"]["variables"] if a["Name"] == variable["Name"]]) == 0:
-                print_removed_variable(variable)
+                removed_variables.append(variable)
+
+        print_removed_variable(removed_variables)
 
     if print_changed_variable is not None:
+        changed_variables = []
         for variable in release_packages["destination"]["variables"]:
             diff = [a for a in release_packages["source"]["variables"] if
                     a["Id"] == variable["Id"] and not a["IsSensitive"] and not a["Value"] == variable["Value"]]
             if len(diff) != 0:
-                print_changed_variable(variable, diff[0])
+                variable["OldValue"] = diff[0]["Value"]
+                changed_variables.append(variable)
+
+        print_changed_variable(changed_variables)
 
     if print_scope_changed is not None:
+        scope_changed_variables = []
         for variable in release_packages["destination"]["variables"]:
             diff = [a for a in release_packages["source"]["variables"] if
                     a["Id"] == variable["Id"] and (
@@ -608,7 +745,10 @@ def get_variable_changes(release_packages, print_new_variable, print_removed_var
                                                   variable["Scope"].get("Processes") or [])
                     )]
             if len(diff) != 0:
-                print_scope_changed(variable, diff[0])
+                variable["OldScope"] = diff[0]
+                scope_changed_variables.append(variable)
+
+        print_scope_changed(scope_changed_variables)
 
 
 if __name__ == '__main__':
@@ -622,11 +762,19 @@ if __name__ == '__main__':
     display_welcome_banner(release_packages)
 
     display_package_diff_banner()
+
+    # Display the diff in the output
     list_package_diff(release_packages,
                       lambda p: print("Release " + release_packages["destination"]["version"]
                                       + " added the package: " + p["id"]),
                       lambda p: print("Release " + release_packages["destination"]["version"]
                                       + " removed the package: " + p["id"]))
+
+    # Capture the diff as output vars
+    list_package_diff(release_packages,
+                      lambda p: print_output_var("Packages[" + p["id"] + "].Action", "Added"),
+                      lambda p: print_output_var("Packages[" + p["id"] + "].Action", "Removed"))
+
     temp_dir = tempfile.mkdtemp()
     release_packages_with_download = download_packages(args, space_id, release_packages, temp_dir)
     release_packages_with_extract = extract_packages(release_packages_with_download, temp_dir)
@@ -635,18 +783,33 @@ if __name__ == '__main__':
                         lambda files, dest, source: print_removed_files(releases, files, dest, source),
                         lambda files, dest, source: print_changed_files(releases, files, dest, source))
 
+    compare_directories(release_packages_with_extract,
+                        lambda files, dest, source: output_added_files(releases, files, dest, source),
+                        lambda files, dest, source: output_removed_files(releases, files, dest, source),
+                        lambda files, dest, source: output_changed_files(releases, files, dest, source))
+
     display_step_diff_banner()
     print_changed_step(release_packages, lambda output: print(output))
 
     display_variable_diff_banner()
     get_variable_changes(release_packages_with_extract,
-                         lambda new: print("Release " + release_packages["destination"]["version"]
-                                           + " added the variable: " + new["Name"]),
-                         lambda new: print("Release " + release_packages["destination"]["version"]
-                                           + " removed the variable: " + new["Name"]),
-                         lambda new, old: print("Release " + release_packages["destination"]["version"]
-                                                + " changed the value of the variable \"" + new["Name"] + "\" from \"" +
-                                                old["Value"] + "\" to \"" + new[
-                                                    "Value"] + "\""),
-                         lambda new, old: print("Release " + release_packages["destination"]["version"]
-                                                + " changed the scope of the variable \"" + new["Name"] + "\""))
+                         lambda vars: print(
+                             "\n".join(map(lambda var: "Release " + release_packages["destination"]["version"]
+                                                       + " added the variable: " + var["Name"], vars))),
+                         lambda vars: print(
+                             "\n".join(map(lambda var: "Release " + release_packages["destination"]["version"]
+                                                       + " removed the variable: " + var["Name"], vars))),
+                         lambda vars: print("\n".join(
+                             map(lambda var: "Release " + release_packages["destination"]["version"]
+                                             + " changed the value of the variable \"" + var["Name"] + "\" from \"" +
+                                             var["Value"] + "\" to \"" + var[
+                                                 "OldValue"] + "\"", vars))),
+                         lambda vars: print("\n".join(
+                             map(lambda var: "Release " + release_packages["destination"]["version"]
+                                             + " changed the scope of the variable \"" + var["Name"] + "\"", vars))))
+
+    get_variable_changes(release_packages_with_extract,
+                         output_added_variable,
+                         output_removed_variable,
+                         output_changed_variable,
+                         output_changed_scope_variable)
