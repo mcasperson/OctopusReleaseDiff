@@ -467,8 +467,7 @@ def output_added_files(releases, files, dest_package, source_package):
             or releases.get("source") is None or releases.get("destination") is None:
         return
 
-    if len(files) != 0:
-        print_output_var("Files[" + dest_package["id"] + "].Added", ",".join(files))
+    print_output_var("Files[" + dest_package["id"] + "].Added", ",".join(files))
 
 
 def print_removed_files(releases, files, dest_package, source_package):
@@ -504,8 +503,7 @@ def output_removed_files(releases, files, dest_package, source_package):
             or releases.get("source") is None or releases.get("destination") is None:
         return
 
-    if len(files) != 0:
-        print_output_var("Files[" + dest_package["id"] + "].Removed", ",".join(files))
+    print_output_var("Files[" + dest_package["id"] + "].Removed", ",".join(files))
 
 
 def print_changed_files(releases, files, dest_package, source_package):
@@ -552,19 +550,19 @@ def output_changed_files(releases, files, dest_package, source_package):
             or releases.get("source") is None or releases.get("destination") is None:
         return None
 
-    if len(files) != 0:
-        print_output_var("Files[" + dest_package["id"] + "].Changed", ",".join(files))
 
-        for file in files:
-            source_file = os.path.join(source_package["extracted"], file)
-            dest_file = os.path.join(dest_package["extracted"], file)
-            if not (is_binary(source_file) or is_binary(dest_file)):
-                text1 = open(source_file).readlines()
-                text2 = open(dest_file).readlines()
-                full_diff = ""
-                for line in difflib.unified_diff(text1, text2):
-                    full_diff += line
-                print_output_var("FileDiff[" + dest_package["id"] + "]." + file, full_diff)
+    print_output_var("Files[" + dest_package["id"] + "].Changed", ",".join(files))
+
+    for file in files:
+        source_file = os.path.join(source_package["extracted"], file)
+        dest_file = os.path.join(dest_package["extracted"], file)
+        if not (is_binary(source_file) or is_binary(dest_file)):
+            text1 = open(source_file).readlines()
+            text2 = open(dest_file).readlines()
+            full_diff = ""
+            for line in difflib.unified_diff(text1, text2):
+                full_diff += line
+            print_output_var("FileDiff[" + dest_package["id"] + "]." + file, full_diff)
 
 
 def output_added_variable(vars):
