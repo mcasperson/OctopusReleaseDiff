@@ -31,4 +31,5 @@ that allows the results of the release diff to be consumed in subsequent steps.
 * `Variables.Removed` is a comma separated list of variables removed in this release.
 * `Variables.Changed` is a comma separated list of variables changed in this release.
 * `Variables.ScopeChanged` is a comma separated list of variables changed in this release.
-* `Variables[<variable name>].Json` is a JSON representation of the named variable whose value or scope has changed.
+* `Variables[<variable name and index>].Changed` is a JSON representation of the named variable whose value has changed.
+* `Variables[<variable name and index>].ScopeChanged` is a JSON representation of the named variable whose scope has changed.

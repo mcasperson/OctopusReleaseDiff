@@ -599,11 +599,7 @@ def output_changed_variable(vars):
 
     print_output_var("Variables.Changed", ",".join(map(lambda var: var["Name"], vars)))
 
-    var_names = set(map(lambda var: var["Name]"], vars))
-    for var_name in var_names:
-        named_vars = [a for a in vars if a["Name"] == var_name]
-        for index, var in enumerate(named_vars):
-            print_output_var("Variables[" + var["Name"] + " " + index + "].Json", json.dumps(var))
+    output_vars_as_json(vars, "Changed")
 
 
 def output_changed_scope_variable(vars):
@@ -614,11 +610,23 @@ def output_changed_scope_variable(vars):
     if vars is None:
         return None
 
-    var_names = set(map(lambda var: var["Name]"], vars))
+    print_output_var("Variables.ScopeChanged", ",".join(map(lambda var: var["Name"], vars)))
+
+    output_vars_as_json(vars, "ScopeChanged")
+
+def output_vars_as_json(vars, key):
+    """
+    Print the details of changes variables
+    :param vars: The changed variables
+    """
+    if vars is None:
+        return None
+
+    var_names = set(map(lambda var: var["Name"], vars))
     for var_name in var_names:
         named_vars = [a for a in vars if a["Name"] == var_name]
         for index, var in enumerate(named_vars):
-            print_output_var("Variables[" + var["Name"] + " " + index + "].Json", json.dumps(var))
+            print_output_var("Variables[" + var["Name"] + " " + index + "]." + key, json.dumps(var))
 
 
 
