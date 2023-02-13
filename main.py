@@ -471,7 +471,6 @@ def print_removed_packages(releases, packages):
 def output_added_packages(packages):
     """
     Print the details of added packages
-    :param releases: The details of the releases to be compared
     :param packages: The list of pacakges added
     """
     if packages is None:
@@ -483,7 +482,6 @@ def output_added_packages(packages):
 def output_removed_packages(packages):
     """
     Print the details of removed packages
-    :param releases: The details of the releases to be compared
     :param packages: The list of pacakges added
     """
     if packages is None:
@@ -689,6 +687,7 @@ def print_changed_step(releases, step_changed):
     """
     Print the details of any changed steps
     :param releases: The details of the releases to compare
+    :param step_changed: The callback called with any diff in the steps
     """
     if releases is None or releases.get("source") is None or releases.get("destination") is None:
         print('Required arguments were not provided. This is a bug. Changes in steps will not be generated.')
@@ -704,6 +703,8 @@ def print_changed_step(releases, step_changed):
             output += line + "\n"
 
         step_changed(output)
+    else:
+        step_changed("")
 
 
 def display_welcome_banner(release_packages):
