@@ -450,7 +450,7 @@ def print_added_packages(releases, packages):
         return
 
     for p in packages:
-        print("Release " + release_packages["destination"]["version"]
+        print("Release " + releases["destination"]["version"]
               + " added the package: " + p["id"])
 
 
@@ -464,7 +464,7 @@ def print_removed_packages(releases, packages):
         return
 
     for p in packages:
-        print("Release " + release_packages["destination"]["version"]
+        print("Release " + releases["destination"]["version"]
               + " removed the package: " + p["id"])
 
 
@@ -474,7 +474,7 @@ def output_added_packages(packages):
     :param releases: The details of the releases to be compared
     :param packages: The list of pacakges added
     """
-    if releases is None or packages is None:
+    if packages is None:
         return
 
     print_output_var("Packages.Added", ",".join(packages))
@@ -486,7 +486,7 @@ def output_removed_packages(packages):
     :param releases: The details of the releases to be compared
     :param packages: The list of pacakges added
     """
-    if releases is None or packages is None:
+    if packages is None:
         return
 
     print_output_var("Packages.Removed", ",".join(packages))
@@ -880,5 +880,5 @@ if __name__ == '__main__':
     try:
         process_release_diff()
     except Exception as ex:
-        print("An exception was thrown. This is a bug.")
+        print("An exception was thrown.")
         print(ex)
