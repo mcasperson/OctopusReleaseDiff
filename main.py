@@ -859,8 +859,8 @@ if __name__ == '__main__':
                          lambda vars: print("\n".join(
                              map(lambda var: "Release " + release_packages["destination"]["version"]
                                              + " changed the value of the variable \"" + var["Name"] + "\" from \"" +
-                                             var["Value"] + "\" to \"" + var[
-                                                 "OldValue"] + "\"", vars))),
+                                             var["OldValue"] + "\" to \"" + var[
+                                                 "Value"] + "\"", vars))),
                          lambda vars: print("\n".join(
                              map(lambda var: "Release " + release_packages["destination"]["version"]
                                              + " changed the scope of the variable \"" + var["Name"] + "\"", vars))))
