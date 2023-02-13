@@ -137,10 +137,10 @@ class TestSum(unittest.TestCase):
                                                                                  main.get_variables)
 
             main.list_package_diff(release_packages,
-                                   lambda p: call_tracker.track_call_with_data("package_added", p["id"]),
-                                   lambda p: call_tracker.track_call_with_data("package_removed", p["id"]))
-            self.assertTrue(call_tracker.was_called_with_data("package_added", "anotherpackage"))
-            self.assertTrue(call_tracker.was_called_with_data("package_removed", "package"))
+                                   lambda p: call_tracker.track_call_with_data("package_added", p),
+                                   lambda p: call_tracker.track_call_with_data("package_removed", p))
+            self.assertTrue(len(call_tracker.get_call("package_added") == 1))
+            self.assertTrue(len(call_tracker.get_call("package_removed") == 1))
 
             temp_dir = tempfile.mkdtemp()
             release_packages_with_download = main.download_packages(args, space_id, release_packages, temp_dir)
@@ -189,8 +189,8 @@ class TestSum(unittest.TestCase):
                                                                                  main.get_variables)
 
             main.list_package_diff(release_packages,
-                                   lambda p: self.fail("No new packages added"),
-                                   lambda p: self.fail("No new packages removed"))
+                                   lambda p: self.assertTrue(len(p) == 0),
+                                   lambda p: self.assertTrue(len(p) == 0))
 
             temp_dir = tempfile.mkdtemp()
             release_packages_with_download = main.download_packages(args, space_id, release_packages, temp_dir)
