@@ -164,6 +164,7 @@ class TestSum(unittest.TestCase):
                                       lambda vars: self.assertTrue(len(vars) == 0,
                                                                    "No variable scopes must be changed"))
 
+            self.assertTrue(len(call_tracker.get_call("variable_changed")) == 1, "One variable must have changed.")
             self.assertTrue(call_tracker.get_call("variable_changed")[0]["Name"] == "Variable1",
                             "The variable called \"Variable1\" must have been changed.")
             self.assertTrue(call_tracker.get_call("variable_changed")[0]["Value"] == "newvalue",
