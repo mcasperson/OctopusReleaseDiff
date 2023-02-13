@@ -18,6 +18,21 @@ python main.py \
     --octopusProject "The Project Name"
 ```
 
+When used as an Octopus step, you would call it like this:
+
+```bash
+python3 -m venv my_env
+. my_env/bin/activate
+pip --disable-pip-version-check install -r requirements.txt
+python main.py \
+  --octopusUrl https://yourinstance.octopus.app \
+  --octopusApiKey API-APIKEYGOESHERE \
+  --octopusSpace "#{Octopus.Space.Name}" \
+  --octopusProject "#{Octopus.Project.Name}" \
+  --oldRelease "#{Octopus.Release.PreviousForEnvironment.Number}" \
+  --newRelease "#{Octopus.Release.Number}"
+```
+
 ## Output Variables
 
 This script generates many [Octopus output variables](https://octopus.com/docs/projects/variables/output-variables)
