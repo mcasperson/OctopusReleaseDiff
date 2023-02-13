@@ -62,11 +62,11 @@ to extract useful information in subsequent steps:
 #{/each}
 
 #{each package in Octopus.Action[Calculate Release Diff].Output.FileDiff}
-	#{each file in package.Files}
+  #{each file in package.Files}
 echo "Changes to file #{file}"
 cat << EOF
 #{file.Diff}
 EOF
-    #{/each}
+  #{/each}
 #{/each}
 ```
