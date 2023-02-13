@@ -139,8 +139,8 @@ class TestSum(unittest.TestCase):
             main.list_package_diff(release_packages,
                                    lambda p: call_tracker.track_call_with_data("package_added", p),
                                    lambda p: call_tracker.track_call_with_data("package_removed", p))
-            self.assertTrue(len(call_tracker.get_call("package_added") == 1))
-            self.assertTrue(len(call_tracker.get_call("package_removed") == 1))
+            self.assertTrue(len(call_tracker.get_call("package_added")) == 1)
+            self.assertTrue(len(call_tracker.get_call("package_removed")) == 1)
 
             temp_dir = tempfile.mkdtemp()
             release_packages_with_download = main.download_packages(args, space_id, release_packages, temp_dir)
