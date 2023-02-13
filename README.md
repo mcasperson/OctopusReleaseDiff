@@ -41,7 +41,7 @@ that allows the results of the release diff to be consumed in subsequent steps.
 * `Files[<package id>].Added` is a comma separated list of files added in the package referenced by the new release.
 * `Files[<package id>].Removed` is a comma separated list of files removed in the package referenced by the new release.
 * `Files[<package id>].Changed` is a comma separated list of files changed in the package referenced by the new release.
-* `FileDiff[<package id>][<file>].Diff` is the diff of a file that changed between the two releases.
+* `FileDiff[<package id>].Files[<file>].Diff` is the diff of a file that changed between the two releases.
 * `Variables.Added` is a comma separated list of variables added in this release.
 * `Variables.Removed` is a comma separated list of variables removed in this release.
 * `Variables.Changed` is a comma separated list of variables changed in this release.
@@ -59,5 +59,14 @@ to extract useful information in subsequent steps:
  #{if package.Added}echo "Package #{package} added files #{package.Added}"#{/if}
  #{if package.Removed}echo "Package #{package} removed files #{package.Removed}"#{/if}
  #{if package.Changed}echo "Package #{package} changed files #{package.Changed}"#{/if}
+#{/each}
+
+#{each package in Octopus.Action[Calculate Release Diff].Output.FileDiff}
+	#{each file in package.Files}
+echo "Changes to file #{file}"
+cat << EOF
+#{file.Diff}
+EOF
+    #{/each}
 #{/each}
 ```

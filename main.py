@@ -618,7 +618,7 @@ def output_changed_files(releases, files, dest_package, source_package):
             full_diff = ""
             for line in difflib.unified_diff(text1, text2):
                 full_diff += line
-            print_output_var("FileDiff[" + dest_package["id"] + "][" + file + "].Diff", full_diff)
+            print_output_var("FileDiff[" + dest_package["id"] + "].Files[" + file + "].Diff", full_diff)
 
 
 def output_added_variable(vars):
