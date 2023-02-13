@@ -81,6 +81,7 @@ def create_release(package_version):
     time.sleep(10)
 
 
+@retry(stop_max_attempt_number=3, wait_fixed=2000)
 def clear_steps():
     deployment_process = requests.get(
         "http://localhost:8080/api/Spaces-1/deploymentprocesses/deploymentprocess-Projects-1",
