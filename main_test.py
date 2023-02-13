@@ -90,6 +90,7 @@ def clear_steps():
     requests.put("http://localhost:8080/api/Spaces-1/deploymentprocesses/deploymentprocess-Projects-1",
                  json.dumps(deployment_process),
                  headers={"X-Octopus-ApiKey": "API-ABCDEFGHIJKLMNOPQURTUVWXYZ12345"})
+    time.sleep(10)
 
 
 class LambdaTracker:
