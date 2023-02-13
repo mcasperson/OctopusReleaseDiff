@@ -33,6 +33,22 @@ python main.py \
   --newRelease "#{Octopus.Release.Number}"
 ```
 
+The script has also been packaged as a Docker image for convenience, and can be run in a script step like this:
+
+```bash
+echo "##octopus[stdout-verbose]"
+docker pull mcasperson/octopusreleasediff
+echo "##octopus[stdout-default]"
+
+docker run mcasperson/octopusreleasediff \
+  --octopusUrl https://yourinstance.octopus.app \
+  --octopusApiKey API-APIKEYGOESHERE \
+  --octopusSpace "#{Octopus.Space.Name}" \
+  --octopusProject "#{Octopus.Project.Name}" \
+  --oldRelease "#{Octopus.Release.PreviousForEnvironment.Number}" \
+  --newRelease "#{Octopus.Release.Number}"
+```
+
 ## Output Variables
 
 This script generates many [Octopus output variables](https://octopus.com/docs/projects/variables/output-variables)
