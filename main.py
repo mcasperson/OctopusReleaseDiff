@@ -816,7 +816,7 @@ def get_variable_changes(release_packages, print_new_variable, print_removed_var
         print_scope_changed(scope_changed_variables)
 
 
-if __name__ == '__main__':
+def process_release_diff():
     args = get_args()
     space_id = space_name_to_id(args)
     project_id = project_name_to_id(args, space_id)
@@ -874,3 +874,11 @@ if __name__ == '__main__':
                          output_removed_variable,
                          output_changed_variable,
                          output_changed_scope_variable)
+
+
+if __name__ == '__main__':
+    try:
+        process_release_diff()
+    except Exception as ex:
+        print("An exception was thrown. This is a bug.")
+        print(ex)
