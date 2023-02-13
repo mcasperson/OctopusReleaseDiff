@@ -61,6 +61,8 @@ jobs:
     - name: Test
       run: pip install pytest; pytest --junitxml=results.xml
       shell: bash
+      env:
+        OCTOPUS_SERVER_BASE64_LICENSE: ${{ secrets.OCTOPUS_SERVER_BASE64_LICENSE }}
     - if: always()
       name: Report
       uses: dorny/test-reporter@v1
