@@ -715,7 +715,7 @@ def output_step_change_diff(diff):
     if diff is None:
         return None
 
-    print_output_var("StepsDiff", diff)
+    print_output_var("Steps.Diff", diff)
 
 
 def display_welcome_banner(release_packages):
