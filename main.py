@@ -490,7 +490,6 @@ def output_removed_packages(packages):
     print_output_var("Packages.Removed", ",".join(packages))
 
 
-
 def print_added_files(releases, files, dest_package, source_package):
     """
     Print the details of added files

@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from retrying import retry
 
 import numpy as np
 import requests
@@ -111,6 +112,7 @@ class LambdaTracker:
 
 
 class TestSum(unittest.TestCase):
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
     def test_release_diff(self):
         call_tracker = LambdaTracker()
         with DockerCompose(os.getcwd(), compose_file_name=["compose.yaml"], pull=True) as compose:
@@ -167,6 +169,7 @@ class TestSum(unittest.TestCase):
             self.assertTrue(call_tracker.get_call("variable_changed")[0]["OldValue"] == "value1",
                             "The variable called \"Variable1\" must have been changed from \"value1\".")
 
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
     def test_file_changes(self):
         call_tracker = LambdaTracker()
         with DockerCompose(os.getcwd(), compose_file_name=["compose.yaml"], pull=True) as compose:
