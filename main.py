@@ -306,6 +306,7 @@ def list_package_diff(release_packages, print_new_package, print_removed_package
     :param print_removed_package: A callback to call with the details of removed packages
     """
     if release_packages is None:
+        print('Required arguments were not provided. This is a bug. The list of changed packages is not available.')
         return
 
     if print_new_package is not None:
@@ -427,6 +428,7 @@ def compare_directories(releases, left_only, right_only, diff):
     """
     if releases is None or left_only is None or right_only is None or diff is None \
             or releases.get("source") is None or releases.get("destination") is None:
+        print('Required arguments were not provided. This is a bug. Diffs between package files will not be generated.')
         return
 
     for dest_package in releases["destination"]["packages"]:
@@ -689,6 +691,7 @@ def print_changed_step(releases, step_changed):
     :param releases: The details of the releases to compare
     """
     if releases is None or releases.get("source") is None or releases.get("destination") is None:
+        print('Required arguments were not provided. This is a bug. Changes in steps will not be generated.')
         return
 
     source_json = json.dumps(releases["source"]["deployment_process"]["Steps"], indent=2)
@@ -757,6 +760,7 @@ def get_variable_changes(release_packages, print_new_variable, print_removed_var
     :return:
     """
     if release_packages is None:
+        print('Required arguments were not provided. This is a bug. Updates to variables will not be generated.')
         return
 
     if print_new_variable is not None:
