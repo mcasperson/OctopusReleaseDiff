@@ -707,6 +707,17 @@ def print_changed_step(releases, step_changed):
         step_changed("")
 
 
+def output_step_change_diff(diff):
+    """
+    Print the details of any step changes
+    :param vars: The changed variables
+    """
+    if diff is None:
+        return None
+
+    print_output_var("StepsDiff", diff)
+
+
 def display_welcome_banner(release_packages):
     """
     Display a welcome banner
@@ -852,6 +863,7 @@ def process_release_diff():
 
     display_step_diff_banner()
     print_changed_step(release_packages, lambda output: print(output))
+    print_changed_step(release_packages, output_step_change_diff)
 
     display_variable_diff_banner()
     get_variable_changes(release_packages_with_extract,

@@ -66,6 +66,7 @@ that allows the results of the release diff to be consumed in subsequent steps.
 * `Variables[<variable name and index>].ScopeChanged` is a JSON representation of the named variable whose scope has changed.
 * `Packages.Added` is a comma separated list of packages that where added by the new release.
 * `Packages.Removed` is a comma separated list of packages that where removed by the new release.
+* `StepsDiff` contains the diff of the steps between the two releases.
 
 These variables can be used with the [Octostache repetition syntax](https://octopus.com/docs/projects/variables/variable-substitutions#VariableSubstitutionSyntax-Repetition)
 to extract useful information in subsequent steps:
