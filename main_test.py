@@ -38,7 +38,7 @@ def apply_terraform(vars):
 
 
 def start_octopus():
-    wait_for_resource_available("http://localhost:8080/api", 60)
+    wait_for_resource_available("http://localhost:8080/api", 300)
 
     with contextlib.suppress(FileNotFoundError):
         os.remove("test/terraform/terraform.tfstate")
