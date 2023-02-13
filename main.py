@@ -309,14 +309,18 @@ def list_package_diff(release_packages, print_new_package, print_removed_package
         return
 
     if print_new_package is not None:
+        added_packages = []
         for package in release_packages["destination"]["packages"]:
             if len([a for a in release_packages["source"]["packages"] if a["id"] == package["id"]]) == 0:
-                print_new_package(package)
+                added_packages.append(package)
+        print_new_package(added_packages)
 
     if print_removed_package is not None:
+        removed_packages = []
         for package in release_packages["source"]["packages"]:
             if len([a for a in release_packages["destination"]["packages"] if a["id"] == package["id"]]) == 0:
-                print_removed_package(package)
+                removed_packages.append(package)
+        print_removed_package(removed_packages)
 
 
 def download_packages(args, space_id, release_packages, path):
@@ -432,6 +436,59 @@ def compare_directories(releases, left_only, right_only, diff):
                 left_only(report.left_only, dest_package, source_package)
                 right_only(report.right_only, dest_package, source_package)
                 diff(report.diff_files, dest_package, source_package)
+
+
+def print_added_packages(releases, packages):
+    """
+    Print the details of added packages
+    :param releases: The details of the releases to be compared
+    :param packages: The list of pacakges added
+    """
+    if releases is None or packages is None:
+        return
+
+    for p in packages:
+        print("Release " + release_packages["destination"]["version"]
+              + " added the package: " + p["id"])
+
+
+def print_removed_packages(releases, packages):
+    """
+    Print the details of removed packages
+    :param releases: The details of the releases to be compared
+    :param packages: The list of pacakges added
+    """
+    if releases is None or packages is None:
+        return
+
+    for p in packages:
+        print("Release " + release_packages["destination"]["version"]
+              + " removed the package: " + p["id"])
+
+
+def output_added_packages(packages):
+    """
+    Print the details of added packages
+    :param releases: The details of the releases to be compared
+    :param packages: The list of pacakges added
+    """
+    if releases is None or packages is None:
+        return
+
+    print_output_var("Packages.Added", ",".join(packages))
+
+
+def output_removed_packages(packages):
+    """
+    Print the details of removed packages
+    :param releases: The details of the releases to be compared
+    :param packages: The list of pacakges added
+    """
+    if releases is None or packages is None:
+        return
+
+    print_output_var("Packages.Removed", ",".join(packages))
+
 
 
 def print_added_files(releases, files, dest_package, source_package):
@@ -770,15 +827,11 @@ if __name__ == '__main__':
 
     # Display the diff in the output
     list_package_diff(release_packages,
-                      lambda p: print("Release " + release_packages["destination"]["version"]
-                                      + " added the package: " + p["id"]),
-                      lambda p: print("Release " + release_packages["destination"]["version"]
-                                      + " removed the package: " + p["id"]))
+                      lambda p: print_added_packages(release_packages, p),
+                      lambda p: print_removed_packages(release_packages, p))
 
     # Capture the diff as output vars
-    list_package_diff(release_packages,
-                      lambda p: print_output_var("Packages[" + p["id"] + "].Action", "Added"),
-                      lambda p: print_output_var("Packages[" + p["id"] + "].Action", "Removed"))
+    list_package_diff(release_packages, output_added_packages, output_removed_packages)
 
     temp_dir = tempfile.mkdtemp()
     release_packages_with_download = download_packages(args, space_id, release_packages, temp_dir)
